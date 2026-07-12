@@ -9,6 +9,7 @@ import {
 } from "./repositories/sqliteRepositories.js";
 import { DocumentService } from "./services/documentService.js";
 import { InMemoryWorkerQueue } from "./workers/inMemoryWorkerQueue.js";
+import { JobWorker } from "./workers/jobWorker.js";
 
 export function createPlatform() {
   const repositories = {
@@ -21,6 +22,11 @@ export function createPlatform() {
   return {
     repositories,
     workerQueue,
+    workers: {
+      jobs: new JobWorker({
+        jobs: repositories.jobs
+      })
+    },
     services: {
       documents: new DocumentService({
         ...repositories,
@@ -43,6 +49,11 @@ export function createSqlitePlatform({ databasePath } = {}) {
     database,
     repositories,
     workerQueue,
+    workers: {
+      jobs: new JobWorker({
+        jobs: repositories.jobs
+      })
+    },
     close() {
       database.close();
     },

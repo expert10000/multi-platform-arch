@@ -204,6 +204,17 @@ class SqliteJobRepository {
       .all(documentId);
   }
 
+  async listByStatus(status) {
+    return this.database
+      .prepare(
+        `SELECT id, document_id AS documentId, type, status, created_at AS createdAt
+         FROM jobs
+         WHERE status = ?
+         ORDER BY created_at ASC`
+      )
+      .all(status);
+  }
+
   async getById(id) {
     return (
       this.database

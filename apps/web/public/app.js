@@ -48,6 +48,14 @@ elements.refreshButton.addEventListener("click", async () => {
 });
 
 await initialize();
+window.setInterval(() => {
+  if (state.activeWorkspaceId) {
+    runAction(async () => {
+      await refreshActiveWorkspace();
+      render();
+    });
+  }
+}, 2500);
 
 async function initialize() {
   await loadHealth();

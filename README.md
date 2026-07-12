@@ -9,6 +9,7 @@ This workspace implements the runtime-independent platform described in the temp
 - OpenAPI contract as the public boundary
 - Node HTTP backend as one replaceable runtime host
 - local web host for workspaces, documents, and processing jobs
+- background worker lifecycle for queued jobs
 
 The key idea is that hosts, backends, databases, and workers can change while the domain workflow and public contract stay stable.
 
@@ -24,6 +25,7 @@ apps/
   web/public/                  Browser workspace and contract-named API client
 tests/
   platform.test.js             Service-level verification
+  jobWorker.test.js            Worker lifecycle verification
 docs/
   architecture.md              Implementation notes
 ```
@@ -41,6 +43,8 @@ Data is stored locally in `data/platform.sqlite`.
 
 The browser calls the backend through `apps/web/public/apiClient.js`, whose
 operation names match `contracts/openapi.yaml`.
+Processing jobs are picked up by the local worker and move from `queued` to
+`running` to `completed`.
 
 Example:
 

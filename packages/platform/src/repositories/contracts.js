@@ -23,6 +23,7 @@
  * - enqueue(job)
  * - list()
  * - listByDocument(documentId)
+ * - listByStatus(status)
  * - getById(id)
  * - updateStatus(jobId, status)
  */

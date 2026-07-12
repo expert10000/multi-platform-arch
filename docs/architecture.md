@@ -7,6 +7,7 @@ The template has been translated into a small working platform starter. The impl
 - SQLite persistence lives in `packages/platform/src/repositories/sqliteRepositories.js`
 - application workflow lives in `packages/platform/src/services/documentService.js`
 - worker protocol lives in `packages/platform/src/workers/inMemoryWorkerQueue.js`
+- job execution lives in `packages/platform/src/workers/jobWorker.js`
 - HTTP transport lives in `apps/node-backend/src/server.js`
 - the browser API client lives in `apps/web/public/apiClient.js`
 
@@ -25,6 +26,8 @@ The current browser client uses operation names that match the OpenAPI `operatio
 ## Runtime Hosts
 
 The included Node backend is intentionally small and dependency-free. It demonstrates how a backend runtime can expose the shared platform through HTTP without owning the business logic. In local mode it uses SQLite storage at `data/platform.sqlite`.
+
+The backend starts a local job worker. The worker polls queued jobs from the repository, marks each job `running`, executes the handler for the job type, then marks the job `completed` or `failed`. Because queued jobs are read from the repository, jobs remain recoverable after a process restart.
 
 Other hosts can follow the same pattern:
 

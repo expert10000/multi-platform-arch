@@ -90,6 +90,10 @@ export class InMemoryJobRepository {
     );
   }
 
+  async listByStatus(status) {
+    return [...this.#jobs.values()].filter((job) => job.status === status);
+  }
+
   async getById(id) {
     return this.#jobs.get(id) ?? null;
   }
