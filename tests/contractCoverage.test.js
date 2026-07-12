@@ -7,7 +7,7 @@ import { createServer } from "../apps/backends/node/src/server.js";
 import {
   apiOperations,
   createPlatformApi
-} from "../apps/hosts/web/public/apiClient.js";
+} from "../apps/hosts/shared/public/apiClient.js";
 
 test("browser API client exposes every OpenAPI operation", async () => {
   const contractOperations = await readOpenApiOperations();

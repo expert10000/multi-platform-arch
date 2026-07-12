@@ -3,146 +3,88 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>DZONE Shared Platform</title>
-    <link rel="stylesheet" href="/styles.css">
+    <title>DZONE Web Host</title>
+    <link rel="stylesheet" href="/web/styles.css">
   </head>
   <body>
-    <header class="topbar">
+    <header class="host-topbar">
       <div>
-        <p class="eyebrow">DZONE Shared Platform</p>
-        <h1>Central Admin Console</h1>
+        <p class="eyebrow">Web Host</p>
+        <h1>Workspace Portal</h1>
       </div>
-      <div class="runtime" id="runtimeStatus">Checking runtime</div>
+      <nav class="host-nav" aria-label="Host navigation">
+        <a href="/admin/">Admin</a>
+        <span id="runtimeStatus">Checking runtime</span>
+      </nav>
     </header>
 
-    <main class="shell">
-      <aside class="sidebar" aria-label="Workspaces">
+    <main class="host-shell">
+      <aside class="workspace-rail">
         <section class="panel">
           <div class="panel-header">
             <h2>Workspaces</h2>
-            <span class="count" id="workspaceCount">0</span>
+            <span class="counter" id="workspaceCount">0</span>
           </div>
-          <form class="stack" id="workspaceForm">
+          <form class="workspace-form" id="workspaceForm">
             <label>
-              Name
-              <input id="workspaceName" name="name" autocomplete="off" required>
+              Workspace
+              <input id="workspaceName" name="name" required autocomplete="off">
             </label>
-            <label>
-              Description
-              <input id="workspaceDescription" name="description" autocomplete="off">
-            </label>
-            <button class="primary" type="submit">Add workspace</button>
+            <button type="submit">Create</button>
           </form>
-          <div class="list" id="workspaceList"></div>
+          <div class="workspace-list" id="workspaceList"></div>
         </section>
       </aside>
 
-      <section class="workspace">
-        <div class="workspace-header">
+      <section class="host-main">
+        <section class="summary-band">
           <div>
             <p class="eyebrow" id="activeWorkspaceLabel">No workspace selected</p>
             <h2 id="activeWorkspaceName">Documents</h2>
           </div>
-          <div class="metrics">
-            <div>
-              <span id="documentCount">0</span>
-              <small>documents</small>
-            </div>
-            <div>
-              <span id="jobCount">0</span>
-              <small>jobs</small>
-            </div>
+          <div class="summary-metrics">
+            <div><strong id="documentCount">0</strong><span>Documents</span></div>
+            <div><strong id="jobCount">0</strong><span>Jobs</span></div>
+            <div><strong id="fileCount">0</strong><span>Files</span></div>
           </div>
-        </div>
-
-        <div class="content-grid">
-          <section class="panel">
-            <div class="panel-header">
-              <h3>New Document</h3>
-            </div>
-            <form class="document-form" id="documentForm">
-              <label>
-                Title
-                <input id="documentTitle" name="title" autocomplete="off" required>
-              </label>
-              <label>
-                Status
-                <select id="documentStatus" name="status">
-                  <option value="draft">Draft</option>
-                  <option value="review">Review</option>
-                  <option value="approved">Approved</option>
-                  <option value="archived">Archived</option>
-                </select>
-              </label>
-              <label class="wide">
-                Tags
-                <input id="documentTags" name="tags" autocomplete="off" placeholder="architecture, contracts">
-              </label>
-              <button class="primary wide" type="submit">Add document</button>
-            </form>
-          </section>
-
-          <section class="panel platform-map" aria-label="Platform architecture">
-            <div class="platform-tabs" id="platformTabs" role="tablist" aria-label="Architecture sections">
-              <button class="platform-tab active" type="button" role="tab" aria-selected="true" data-architecture-section="models">Models</button>
-              <button class="platform-tab" type="button" role="tab" aria-selected="false" data-architecture-section="contracts">Contracts</button>
-              <button class="platform-tab" type="button" role="tab" aria-selected="false" data-architecture-section="services">Services</button>
-              <button class="platform-tab" type="button" role="tab" aria-selected="false" data-architecture-section="hosts">Hosts</button>
-              <button class="platform-tab" type="button" role="tab" aria-selected="false" data-architecture-section="backends">Backends</button>
-              <button class="platform-tab" type="button" role="tab" aria-selected="false" data-architecture-section="workers">Workers</button>
-            </div>
-            <div class="architecture-detail" id="architectureDetail" role="tabpanel" aria-live="polite"></div>
-          </section>
-        </div>
-
-        <section class="panel implementation-panel">
-          <div class="panel-header">
-            <div>
-              <p class="eyebrow">Runtime Implementations</p>
-              <h3>Hosts, Backends, Workers</h3>
-            </div>
-          </div>
-          <div class="implementation-tabs" id="implementationTabs" role="tablist" aria-label="Runtime implementation sections">
-            <button class="implementation-tab active" type="button" role="tab" aria-selected="true" data-implementation-section="hosts">Hosts</button>
-            <button class="implementation-tab" type="button" role="tab" aria-selected="false" data-implementation-section="backends">Backends</button>
-            <button class="implementation-tab" type="button" role="tab" aria-selected="false" data-implementation-section="workers">Workers</button>
-          </div>
-          <div class="implementation-grid" id="implementationDetail" role="tabpanel" aria-live="polite"></div>
         </section>
 
-        <section class="panel table-panel">
+        <section class="panel document-composer">
           <div class="panel-header">
-            <h3>Document Library</h3>
-            <button class="ghost" id="refreshButton" type="button" aria-label="Refresh">Refresh</button>
+            <h2>New Document</h2>
           </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Status</th>
-                  <th>Tags</th>
-                  <th>File</th>
-                  <th>Updated</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="documentRows"></tbody>
-            </table>
-          </div>
-          <div class="empty" id="emptyState">Create or select a workspace to begin.</div>
+          <form id="documentForm" class="document-form">
+            <label>
+              Title
+              <input id="documentTitle" name="title" required autocomplete="off">
+            </label>
+            <label>
+              Tags
+              <input id="documentTags" name="tags" autocomplete="off" placeholder="design, proposal">
+            </label>
+            <button type="submit">Add Document</button>
+          </form>
         </section>
 
         <section class="panel">
           <div class="panel-header">
-            <h3>Processing Jobs</h3>
+            <h2>Documents</h2>
+            <button class="secondary" id="refreshButton" type="button">Refresh</button>
           </div>
-          <div class="job-list" id="jobList"></div>
+          <div class="document-grid" id="documentGrid"></div>
+          <div class="empty" id="documentEmpty">Create or select a workspace to begin.</div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Jobs</h2>
+          </div>
+          <div class="job-board" id="jobBoard"></div>
         </section>
       </section>
     </main>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script type="module" src="/app.js"></script>
+    <script type="module" src="/web/app.js"></script>
   </body>
 </html>

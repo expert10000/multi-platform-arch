@@ -4,7 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { createPlatformApi } from "../apps/hosts/web/public/apiClient.js";
+import { createPlatformApi } from "../apps/hosts/shared/public/apiClient.js";
 
 test("python backend supports the shared contract flow", async () => {
   const fileRoot = await mkdtemp(join(tmpdir(), "dzone-python-files-"));

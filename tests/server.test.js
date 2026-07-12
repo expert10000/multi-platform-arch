@@ -4,9 +4,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { createServer } from "../apps/backends/node/src/server.js";
-import { createPlatformApi } from "../apps/hosts/web/public/apiClient.js";
+import { createPlatformApi } from "../apps/hosts/shared/public/apiClient.js";
 
-test("serves the local web host from the backend root", async () => {
+test("serves the central admin host from the backend root", async () => {
   const { server, baseUrl } = await startServer();
   try {
     const response = await fetch(baseUrl);
@@ -14,6 +14,19 @@ test("serves the local web host from the backend root", async () => {
 
     assert.equal(response.status, 200);
     assert.match(html, /Central Admin Console/);
+  } finally {
+    server.close();
+  }
+});
+
+test("serves the distinct web host", async () => {
+  const { server, baseUrl } = await startServer();
+  try {
+    const response = await fetch(`${baseUrl}/web/`);
+    const html = await response.text();
+
+    assert.equal(response.status, 200);
+    assert.match(html, /Workspace Portal/);
   } finally {
     server.close();
   }

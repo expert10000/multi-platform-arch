@@ -4,7 +4,9 @@ import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createPlatform, NotFoundError, ValidationError } from "../../../../packages/platform/src/index.js";
 
-const publicRoot = fileURLToPath(new URL("../../../hosts/web/public", import.meta.url));
+const adminPublicRoot = fileURLToPath(new URL("../../../hosts/admin/public", import.meta.url));
+const webPublicRoot = fileURLToPath(new URL("../../../hosts/web/public", import.meta.url));
+const sharedPublicRoot = fileURLToPath(new URL("../../../hosts/shared/public", import.meta.url));
 const defaultFileStorageRoot = fileURLToPath(new URL("../../../../data/files/", import.meta.url));
 
 export function createServer(platform = createPlatform(), { fileStorageRoot = defaultFileStorageRoot } = {}) {
@@ -113,11 +115,16 @@ export function createServer(platform = createPlatform(), { fileStorageRoot = de
 }
 
 function isStaticRequest(path) {
-  return path === "/" || path.startsWith("/assets/") || [".css", ".js", ".png", ".ico"].includes(extname(path));
+  return path === "/" || path === "/admin" || path === "/web" || path.startsWith("/admin/") || path.startsWith("/web/") || path.startsWith("/shared/");
 }
 
 async function tryServeStatic(path, response) {
-  const relativePath = path === "/" ? "index.html" : path.slice(1);
+  const staticTarget = staticTargetFor(path);
+  if (!staticTarget) {
+    return false;
+  }
+
+  const { root, relativePath } = staticTarget;
   const normalizedPath = normalize(relativePath);
 
   if (normalizedPath.startsWith("..")) {
@@ -125,7 +132,7 @@ async function tryServeStatic(path, response) {
   }
 
   try {
-    const filePath = join(publicRoot, normalizedPath);
+    const filePath = join(root, normalizedPath);
     const content = await readFile(filePath);
     response.writeHead(200, {
       "content-type": contentTypeFor(filePath)
@@ -138,6 +145,25 @@ async function tryServeStatic(path, response) {
     }
     throw error;
   }
+}
+
+function staticTargetFor(path) {
+  if (path === "/" || path === "/admin" || path === "/admin/") {
+    return { root: adminPublicRoot, relativePath: "index.html" };
+  }
+  if (path === "/web" || path === "/web/") {
+    return { root: webPublicRoot, relativePath: "index.html" };
+  }
+  if (path.startsWith("/admin/")) {
+    return { root: adminPublicRoot, relativePath: path.slice("/admin/".length) };
+  }
+  if (path.startsWith("/web/")) {
+    return { root: webPublicRoot, relativePath: path.slice("/web/".length) };
+  }
+  if (path.startsWith("/shared/")) {
+    return { root: sharedPublicRoot, relativePath: path.slice("/shared/".length) };
+  }
+  return null;
 }
 
 async function readJson(request, fallback) {

@@ -24,7 +24,9 @@ packages/
 apps/
   backends/node/src/           Node HTTP implementation of the contract
   backends/python/             Python HTTP implementation of the same contract
-  hosts/web/public/            Browser workspace and contract-named API client
+  hosts/admin/public/          Central admin console
+  hosts/web/public/            Separate web workspace host
+  hosts/shared/public/         Contract-named browser API client
 tests/
   platform.test.js             Service-level verification
   jobWorker.test.js            Worker lifecycle verification
@@ -41,10 +43,11 @@ npm start
 
 The backend listens on `http://localhost:3000` by default.
 Open `http://localhost:3000` for the central admin console.
+Open `http://localhost:3000/web/` for the separate web host.
 Data is stored locally in `data/platform.sqlite`.
 Uploaded files are stored locally under `data/files/`.
 
-The browser host is the central admin console. It calls the backend through `apps/hosts/web/public/apiClient.js`, whose
+The browser hosts call the backend through `apps/hosts/shared/public/apiClient.js`, whose
 operation names match `contracts/openapi.yaml`.
 Processing jobs are picked up by the local worker and move from `queued` to
 `running` to `completed`.

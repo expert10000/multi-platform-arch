@@ -10,7 +10,9 @@ The template has been translated into a small working platform starter. The impl
 - job execution lives in `packages/platform/src/workers/jobWorker.js`
 - HTTP transport lives in `apps/backends/node/src/server.js`
 - Python HTTP transport lives in `apps/backends/python/app.py`
-- the browser API client lives in `apps/hosts/web/public/apiClient.js`
+- the central admin host lives in `apps/hosts/admin/public`
+- the web workspace host lives in `apps/hosts/web/public`
+- the browser API client lives in `apps/hosts/shared/public/apiClient.js`
 
 ## Shared Business Platform
 
@@ -24,7 +26,7 @@ The API boundary is described in `contracts/openapi.yaml`. Backends should imple
 
 The current browser client uses operation names that match the OpenAPI `operationId` values. Contract coverage tests compare those names against the OpenAPI document and exercise each route through the backend.
 
-The web host currently acts as the central admin console. It manages workspaces, documents, uploads, processing jobs, and runtime visibility for hosts, backends, and workers.
+The admin host manages runtime visibility for hosts, backends, and workers. The separate web host focuses on workspaces, documents, uploads, and jobs.
 
 ## Runtime Hosts
 
