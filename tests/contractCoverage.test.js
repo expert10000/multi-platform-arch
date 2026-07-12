@@ -3,11 +3,11 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { createServer } from "../apps/node-backend/src/server.js";
+import { createServer } from "../apps/backends/node/src/server.js";
 import {
   apiOperations,
   createPlatformApi
-} from "../apps/web/public/apiClient.js";
+} from "../apps/hosts/web/public/apiClient.js";
 
 test("browser API client exposes every OpenAPI operation", async () => {
   const contractOperations = await readOpenApiOperations();

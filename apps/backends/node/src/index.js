@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { createServer } from "./server.js";
-import { createSqlitePlatform } from "../../../packages/platform/src/index.js";
+import { createSqlitePlatform } from "../../../../packages/platform/src/index.js";
 
 const port = Number.parseInt(process.env.PORT ?? "3000", 10);
 const databasePath = process.env.DZONE_DATABASE_PATH ?? join(process.cwd(), "data", "platform.sqlite");

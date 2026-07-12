@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Runtime-independent enterprise application platform starter.",
   "scripts": {
-    "start": "node apps/node-backend/src/index.js",
+    "start": "node apps/backends/node/src/index.js",
     "test": "node --test tests/*.test.js",
     "check": "npm test"
   },

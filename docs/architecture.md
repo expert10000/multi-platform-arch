@@ -8,8 +8,8 @@ The template has been translated into a small working platform starter. The impl
 - application workflow lives in `packages/platform/src/services/documentService.js`
 - worker protocol lives in `packages/platform/src/workers/inMemoryWorkerQueue.js`
 - job execution lives in `packages/platform/src/workers/jobWorker.js`
-- HTTP transport lives in `apps/node-backend/src/server.js`
-- the browser API client lives in `apps/web/public/apiClient.js`
+- HTTP transport lives in `apps/backends/node/src/server.js`
+- the browser API client lives in `apps/hosts/web/public/apiClient.js`
 
 ## Shared Business Platform
 

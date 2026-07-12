@@ -2,10 +2,10 @@ import { createServer as createHttpServer } from "node:http";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createPlatform, NotFoundError, ValidationError } from "../../../packages/platform/src/index.js";
+import { createPlatform, NotFoundError, ValidationError } from "../../../../packages/platform/src/index.js";
 
-const publicRoot = fileURLToPath(new URL("../../web/public", import.meta.url));
-const defaultFileStorageRoot = fileURLToPath(new URL("../../../data/files/", import.meta.url));
+const publicRoot = fileURLToPath(new URL("../../../hosts/web/public", import.meta.url));
+const defaultFileStorageRoot = fileURLToPath(new URL("../../../../data/files/", import.meta.url));
 
 export function createServer(platform = createPlatform(), { fileStorageRoot = defaultFileStorageRoot } = {}) {
   const service = platform.services.documents;

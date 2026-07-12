@@ -22,8 +22,8 @@ contracts/
 packages/
   platform/src/                Runtime-independent domain, repositories, services, workers
 apps/
-  node-backend/src/            Node HTTP implementation of the contract
-  web/public/                  Browser workspace and contract-named API client
+  backends/node/src/           Node HTTP implementation of the contract
+  hosts/web/public/            Browser workspace and contract-named API client
 tests/
   platform.test.js             Service-level verification
   jobWorker.test.js            Worker lifecycle verification
@@ -43,7 +43,7 @@ Open `http://localhost:3000` for the web workspace.
 Data is stored locally in `data/platform.sqlite`.
 Uploaded files are stored locally under `data/files/`.
 
-The browser calls the backend through `apps/web/public/apiClient.js`, whose
+The browser host calls the backend through `apps/hosts/web/public/apiClient.js`, whose
 operation names match `contracts/openapi.yaml`.
 Processing jobs are picked up by the local worker and move from `queued` to
 `running` to `completed`.

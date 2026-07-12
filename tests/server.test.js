@@ -3,8 +3,8 @@ import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { createServer } from "../apps/node-backend/src/server.js";
-import { createPlatformApi } from "../apps/web/public/apiClient.js";
+import { createServer } from "../apps/backends/node/src/server.js";
+import { createPlatformApi } from "../apps/hosts/web/public/apiClient.js";
 
 test("serves the local web host from the backend root", async () => {
   const { server, baseUrl } = await startServer();
