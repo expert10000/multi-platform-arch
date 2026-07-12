@@ -4,7 +4,41 @@ const state = {
   workspaces: [],
   documents: [],
   jobs: [],
-  activeWorkspaceId: null
+  activeWorkspaceId: null,
+  activeArchitectureSection: "models"
+};
+
+const architectureSections = {
+  models: {
+    title: "Domain Models",
+    summary: "Stable business objects shared across runtimes.",
+    items: ["Workspace", "Document", "Folder", "ProcessingJob"]
+  },
+  contracts: {
+    title: "Contracts",
+    summary: "Versioned boundaries that keep clients and servers aligned.",
+    items: ["OpenAPI", "JSON DTOs", "Worker protocols", "Generated clients"]
+  },
+  services: {
+    title: "Application Services",
+    summary: "Use cases that coordinate validation, repositories, and workers.",
+    items: ["Create document", "Attach file", "Queue processing", "Search documents"]
+  },
+  hosts: {
+    title: "Application Hosts",
+    summary: "User-facing shells that consume the same platform contract.",
+    items: ["React Web", "Electron", "React Native", ".NET MAUI", "Uno", "Flutter"]
+  },
+  backends: {
+    title: "Backend Implementations",
+    summary: "Replaceable server runtimes that implement the same API contract.",
+    items: ["Node.js", "ASP.NET Core", "Spring Boot", "FastAPI", "Go"]
+  },
+  workers: {
+    title: "Workers",
+    summary: "Background processors for document and search workflows.",
+    items: ["Extract text", "Generate thumbnails", "Summarize", "Index search"]
+  }
 };
 
 const elements = {
@@ -26,6 +60,8 @@ const elements = {
   emptyState: document.querySelector("#emptyState"),
   jobList: document.querySelector("#jobList"),
   refreshButton: document.querySelector("#refreshButton"),
+  platformTabs: document.querySelector("#platformTabs"),
+  architectureDetail: document.querySelector("#architectureDetail"),
   toast: document.querySelector("#toast")
 };
 
@@ -45,6 +81,15 @@ elements.refreshButton.addEventListener("click", async () => {
     render();
     showToast("Workspace refreshed.");
   });
+});
+
+elements.platformTabs.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-architecture-section]");
+  if (!button) {
+    return;
+  }
+  state.activeArchitectureSection = button.dataset.architectureSection;
+  renderArchitecture();
 });
 
 await initialize();
@@ -160,6 +205,7 @@ function render() {
   renderWorkspaces();
   renderDocuments();
   renderJobs();
+  renderArchitecture();
 }
 
 function renderWorkspaces() {
@@ -236,6 +282,32 @@ function renderJobs() {
       return item;
     })
   );
+}
+
+function renderArchitecture() {
+  const section = architectureSections[state.activeArchitectureSection];
+
+  for (const button of elements.platformTabs.querySelectorAll("[data-architecture-section]")) {
+    const isActive = button.dataset.architectureSection === state.activeArchitectureSection;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
+  }
+
+  const title = document.createElement("h3");
+  title.textContent = section.title;
+
+  const summary = document.createElement("p");
+  summary.textContent = section.summary;
+
+  const list = document.createElement("div");
+  list.className = "architecture-items";
+  for (const item of section.items) {
+    const chip = document.createElement("span");
+    chip.textContent = item;
+    list.append(chip);
+  }
+
+  elements.architectureDetail.replaceChildren(title, summary, list);
 }
 
 function tableCell(content) {

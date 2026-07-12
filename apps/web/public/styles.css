@@ -283,47 +283,67 @@ button:focus-visible {
 
 .platform-map {
   display: grid;
-  align-content: center;
-  gap: 10px;
+  gap: 14px;
   padding: 16px;
-  min-height: 192px;
+  min-height: 240px;
   background:
     linear-gradient(90deg, rgba(36, 90, 141, 0.08), transparent 55%),
     #fff;
 }
 
-.layer,
-.layer-row {
+.platform-tabs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
 
-.layer-core {
-  grid-template-columns: 1fr;
-  border: 1px solid rgba(20, 108, 99, 0.28);
-  border-radius: 8px;
-  padding: 12px;
-  background: #eef7f4;
-  color: var(--accent-strong);
-  font-weight: 850;
-  text-align: center;
-}
-
-.layer-row span {
+.platform-tab {
   min-height: 38px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 9px 8px;
+  padding: 9px 10px;
   background: #fff;
+  color: var(--ink);
   font-size: 13px;
   font-weight: 800;
   text-align: center;
 }
 
-.layer-row.muted span {
-  background: #f6f8f9;
+.platform-tab.active {
+  border-color: rgba(20, 108, 99, 0.45);
+  background: #eef7f4;
+  color: var(--accent-strong);
+}
+
+.architecture-detail {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: #fff;
+}
+
+.architecture-detail p {
+  margin: 0;
   color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.architecture-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.architecture-items span {
+  border-radius: 8px;
+  padding: 5px 8px;
+  background: #edf3fa;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 750;
 }
 
 .table-panel {

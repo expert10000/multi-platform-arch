@@ -82,18 +82,16 @@
             </form>
           </section>
 
-          <section class="panel platform-map" aria-label="Platform layers">
-            <div class="layer layer-core">Shared Platform</div>
-            <div class="layer-row">
-              <span>Hosts</span>
-              <span>Contracts</span>
-              <span>Services</span>
+          <section class="panel platform-map" aria-label="Platform architecture">
+            <div class="platform-tabs" id="platformTabs" role="tablist" aria-label="Architecture sections">
+              <button class="platform-tab active" type="button" role="tab" aria-selected="true" data-architecture-section="models">Models</button>
+              <button class="platform-tab" type="button" role="tab" aria-selected="false" data-architecture-section="contracts">Contracts</button>
+              <button class="platform-tab" type="button" role="tab" aria-selected="false" data-architecture-section="services">Services</button>
+              <button class="platform-tab" type="button" role="tab" aria-selected="false" data-architecture-section="hosts">Hosts</button>
+              <button class="platform-tab" type="button" role="tab" aria-selected="false" data-architecture-section="backends">Backends</button>
+              <button class="platform-tab" type="button" role="tab" aria-selected="false" data-architecture-section="workers">Workers</button>
             </div>
-            <div class="layer-row muted">
-              <span>React</span>
-              <span>OpenAPI</span>
-              <span>Node</span>
-            </div>
+            <div class="architecture-detail" id="architectureDetail" role="tabpanel" aria-live="polite"></div>
           </section>
         </div>
 
