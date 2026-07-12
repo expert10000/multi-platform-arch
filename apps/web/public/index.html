@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DZONE Shared Platform</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">DZONE Shared Platform</p>
+        <h1>Workspace Operations</h1>
+      </div>
+      <div class="runtime" id="runtimeStatus">Checking runtime</div>
+    </header>
+
+    <main class="shell">
+      <aside class="sidebar" aria-label="Workspaces">
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Workspaces</h2>
+            <span class="count" id="workspaceCount">0</span>
+          </div>
+          <form class="stack" id="workspaceForm">
+            <label>
+              Name
+              <input id="workspaceName" name="name" autocomplete="off" required>
+            </label>
+            <label>
+              Description
+              <input id="workspaceDescription" name="description" autocomplete="off">
+            </label>
+            <button class="primary" type="submit">Add workspace</button>
+          </form>
+          <div class="list" id="workspaceList"></div>
+        </section>
+      </aside>
+
+      <section class="workspace">
+        <div class="workspace-header">
+          <div>
+            <p class="eyebrow" id="activeWorkspaceLabel">No workspace selected</p>
+            <h2 id="activeWorkspaceName">Documents</h2>
+          </div>
+          <div class="metrics">
+            <div>
+              <span id="documentCount">0</span>
+              <small>documents</small>
+            </div>
+            <div>
+              <span id="jobCount">0</span>
+              <small>jobs</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="content-grid">
+          <section class="panel">
+            <div class="panel-header">
+              <h3>New Document</h3>
+            </div>
+            <form class="document-form" id="documentForm">
+              <label>
+                Title
+                <input id="documentTitle" name="title" autocomplete="off" required>
+              </label>
+              <label>
+                Status
+                <select id="documentStatus" name="status">
+                  <option value="draft">Draft</option>
+                  <option value="review">Review</option>
+                  <option value="approved">Approved</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </label>
+              <label class="wide">
+                Tags
+                <input id="documentTags" name="tags" autocomplete="off" placeholder="architecture, contracts">
+              </label>
+              <button class="primary wide" type="submit">Add document</button>
+            </form>
+          </section>
+
+          <section class="panel platform-map" aria-label="Platform layers">
+            <div class="layer layer-core">Shared Platform</div>
+            <div class="layer-row">
+              <span>Hosts</span>
+              <span>Contracts</span>
+              <span>Services</span>
+            </div>
+            <div class="layer-row muted">
+              <span>React</span>
+              <span>OpenAPI</span>
+              <span>Node</span>
+            </div>
+          </section>
+        </div>
+
+        <section class="panel table-panel">
+          <div class="panel-header">
+            <h3>Document Library</h3>
+            <button class="ghost" id="refreshButton" type="button" aria-label="Refresh">Refresh</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Status</th>
+                  <th>Tags</th>
+                  <th>Updated</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="documentRows"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="emptyState">Create or select a workspace to begin.</div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h3>Processing Jobs</h3>
+          </div>
+          <div class="job-list" id="jobList"></div>
+        </section>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

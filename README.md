@@ -1,0 +1,76 @@
+# DZONE Shared Platform
+
+This workspace implements the runtime-independent platform described in the template:
+
+- shared domain models and business services
+- repository abstractions with an in-memory implementation
+- SQLite persistence for the local backend runtime
+- worker protocol with an in-memory queue
+- OpenAPI contract as the public boundary
+- Node HTTP backend as one replaceable runtime host
+- local web host for workspaces, documents, and processing jobs
+
+The key idea is that hosts, backends, databases, and workers can change while the domain workflow and public contract stay stable.
+
+## Project Layout
+
+```text
+contracts/
+  openapi.yaml                 Public API contract
+packages/
+  platform/src/                Runtime-independent domain, repositories, services, workers
+apps/
+  node-backend/src/            Node HTTP implementation of the contract
+  web/public/                  Browser workspace and contract-named API client
+tests/
+  platform.test.js             Service-level verification
+docs/
+  architecture.md              Implementation notes
+```
+
+## Run
+
+```bash
+npm test
+npm start
+```
+
+The backend listens on `http://localhost:3000` by default.
+Open `http://localhost:3000` for the web workspace.
+Data is stored locally in `data/platform.sqlite`.
+
+The browser calls the backend through `apps/web/public/apiClient.js`, whose
+operation names match `contracts/openapi.yaml`.
+
+Example:
+
+```bash
+curl http://localhost:3000/health
+curl http://localhost:3000/workspaces
+```
+
+To use a different database file:
+
+```bash
+DZONE_DATABASE_PATH=/path/to/platform.sqlite npm start
+```
+
+## Architecture
+
+```text
+Application Host
+      |
+      v
+OpenAPI Contract
+      |
+      v
+Backend Runtime
+      |
+      v
+Application Services
+      |
+      v
+Repository Abstractions + Worker Protocols
+```
+
+The current backend uses in-memory repositories so the system is easy to run and test. A SQLite, PostgreSQL, SQL Server, FastAPI, ASP.NET Core, Spring Boot, or Go implementation can be added by implementing the same repository and service contracts.
