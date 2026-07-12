@@ -23,6 +23,7 @@ packages/
   platform/src/                Runtime-independent domain, repositories, services, workers
 apps/
   backends/node/src/           Node HTTP implementation of the contract
+  backends/python/             Python HTTP implementation of the same contract
   hosts/web/public/            Browser workspace and contract-named API client
 tests/
   platform.test.js             Service-level verification
@@ -47,6 +48,25 @@ The browser host calls the backend through `apps/hosts/web/public/apiClient.js`,
 operation names match `contracts/openapi.yaml`.
 Processing jobs are picked up by the local worker and move from `queued` to
 `running` to `completed`.
+
+## Backends
+
+Run the Node backend and bundled web host:
+
+```bash
+npm run start:backend:node
+```
+
+Run the dependency-free Python backend:
+
+```bash
+npm run start:backend:python
+```
+
+Both backends expose the same OpenAPI route surface. The Python backend keeps
+metadata in memory and stores uploaded bytes under `data/python-files/`.
+Both backends allow cross-origin requests so hosts can be served separately and
+point their API client at either backend URL.
 
 Example:
 

@@ -71,6 +71,25 @@ test("uploads document files to local storage and records metadata", async () =>
   }
 });
 
+test("node backend supports cross-origin preflight for separated hosts", async () => {
+  const { server, baseUrl } = await startServer();
+
+  try {
+    const response = await fetch(`${baseUrl}/documents/document_1/file`, {
+      method: "OPTIONS",
+      headers: {
+        "access-control-request-method": "POST",
+        "access-control-request-headers": "content-type, x-file-name"
+      }
+    });
+
+    assert.equal(response.status, 204);
+    assert.equal(response.headers.get("access-control-allow-origin"), "*");
+  } finally {
+    server.close();
+  }
+});
+
 async function startServer(options) {
   const server = createServer(undefined, options);
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));

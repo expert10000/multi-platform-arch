@@ -6,6 +6,8 @@
   "description": "Runtime-independent enterprise application platform starter.",
   "scripts": {
     "start": "node apps/backends/node/src/index.js",
+    "start:backend:node": "node apps/backends/node/src/index.js",
+    "start:backend:python": "python apps/backends/python/app.py",
     "test": "node --test tests/*.test.js",
     "check": "npm test"
   },

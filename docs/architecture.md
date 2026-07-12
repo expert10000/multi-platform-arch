@@ -9,6 +9,7 @@ The template has been translated into a small working platform starter. The impl
 - worker protocol lives in `packages/platform/src/workers/inMemoryWorkerQueue.js`
 - job execution lives in `packages/platform/src/workers/jobWorker.js`
 - HTTP transport lives in `apps/backends/node/src/server.js`
+- Python HTTP transport lives in `apps/backends/python/app.py`
 - the browser API client lives in `apps/hosts/web/public/apiClient.js`
 
 ## Shared Business Platform
@@ -26,6 +27,10 @@ The current browser client uses operation names that match the OpenAPI `operatio
 ## Runtime Hosts
 
 The included Node backend is intentionally small and dependency-free. It demonstrates how a backend runtime can expose the shared platform through HTTP without owning the business logic. In local mode it uses SQLite storage at `data/platform.sqlite`.
+
+The Python backend demonstrates backend interchangeability. It implements the same route surface with Python's standard library, keeps metadata in memory, and stores uploaded files under `data/python-files/`. The web host can use the same API client against either backend URL.
+
+Both HTTP backends support cross-origin requests so hosts can run separately from backend runtimes.
 
 The backend starts a local job worker. The worker polls queued jobs from the repository, marks each job `running`, executes the handler for the job type, then marks the job `completed` or `failed`. Because queued jobs are read from the repository, jobs remain recoverable after a process restart.
 

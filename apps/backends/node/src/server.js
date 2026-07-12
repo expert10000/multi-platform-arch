@@ -16,6 +16,10 @@ export function createServer(platform = createPlatform(), { fileStorageRoot = de
       const method = request.method ?? "GET";
       const path = url.pathname;
 
+      if (method === "OPTIONS") {
+        return sendNoContent(response);
+      }
+
       if (method === "GET" && isStaticRequest(path)) {
         const served = await tryServeStatic(path, response);
         if (served) {
@@ -88,8 +92,7 @@ export function createServer(platform = createPlatform(), { fileStorageRoot = de
 
       if (documentMatch && method === "DELETE") {
         await service.deleteDocument(documentMatch[1]);
-        response.writeHead(204);
-        return response.end();
+        return sendNoContent(response);
       }
 
       if (method === "GET" && path === "/jobs") {
@@ -191,9 +194,15 @@ function safeFileName(value) {
 
 function sendJson(response, statusCode, payload) {
   response.writeHead(statusCode, {
-    "content-type": "application/json; charset=utf-8"
+    "content-type": "application/json; charset=utf-8",
+    ...corsHeaders()
   });
   response.end(JSON.stringify(payload));
+}
+
+function sendNoContent(response) {
+  response.writeHead(204, corsHeaders());
+  response.end();
 }
 
 function sendError(response, error) {
@@ -220,4 +229,12 @@ function contentTypeFor(filePath) {
     return "image/png";
   }
   return "application/octet-stream";
+}
+
+function corsHeaders() {
+  return {
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "access-control-allow-headers": "content-type, x-file-name"
+  };
 }
