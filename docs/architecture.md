@@ -29,6 +29,8 @@ The included Node backend is intentionally small and dependency-free. It demonst
 
 The backend starts a local job worker. The worker polls queued jobs from the repository, marks each job `running`, executes the handler for the job type, then marks the job `completed` or `failed`. Because queued jobs are read from the repository, jobs remain recoverable after a process restart.
 
+Document uploads store searchable metadata in SQLite and write file bytes under `data/files/`. Uploading a file queues an `extract-text` job so the same worker lifecycle is used for ingestion.
+
 Other hosts can follow the same pattern:
 
 - React, Electron, React Native, MAUI, Uno, or Flutter clients consume the OpenAPI contract.

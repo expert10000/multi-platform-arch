@@ -1,12 +1,13 @@
 import { createServer as createHttpServer } from "node:http";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createPlatform, NotFoundError, ValidationError } from "../../../packages/platform/src/index.js";
 
 const publicRoot = fileURLToPath(new URL("../../web/public", import.meta.url));
+const defaultFileStorageRoot = fileURLToPath(new URL("../../../data/files/", import.meta.url));
 
-export function createServer(platform = createPlatform()) {
+export function createServer(platform = createPlatform(), { fileStorageRoot = defaultFileStorageRoot } = {}) {
   const service = platform.services.documents;
 
   return createHttpServer(async (request, response) => {
@@ -46,6 +47,23 @@ export function createServer(platform = createPlatform()) {
 
       if (method === "POST" && path === "/documents") {
         return sendJson(response, 201, await service.createDocument(await readJson(request)));
+      }
+
+      const documentFileMatch = path.match(/^\/documents\/([^/]+)\/file$/);
+      if (documentFileMatch && method === "POST") {
+        const documentId = decodeURIComponent(documentFileMatch[1]);
+        await service.getDocument(documentId);
+        const content = await readBinary(request);
+        const fileName = readFileNameHeader(request);
+        const mimeType = request.headers["content-type"] ?? "application/octet-stream";
+        await writeDocumentFile(fileStorageRoot, documentId, fileName, content);
+        const document = await service.attachDocumentFile(documentId, {
+          fileName,
+          mimeType,
+          size: content.length
+        });
+        const job = await service.processDocument(documentId, "extract-text");
+        return sendJson(response, 202, { document, job });
       }
 
       const documentProcessMatch = path.match(/^\/documents\/([^/]+)\/process$/);
@@ -133,6 +151,42 @@ async function readJson(request, fallback) {
     return {};
   }
   return JSON.parse(raw);
+}
+
+async function readBinary(request) {
+  const chunks = [];
+  for await (const chunk of request) {
+    chunks.push(chunk);
+  }
+  const content = Buffer.concat(chunks);
+  if (content.length === 0) {
+    throw new ValidationError("File content is required.");
+  }
+  return content;
+}
+
+function readFileNameHeader(request) {
+  const value = request.headers["x-file-name"];
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new ValidationError("x-file-name header is required.");
+  }
+  return decodeURIComponent(value).trim();
+}
+
+async function writeDocumentFile(fileStorageRoot, documentId, fileName, content) {
+  const directory = join(fileStorageRoot, safePathSegment(documentId));
+  const filePath = join(directory, safeFileName(fileName));
+  await mkdir(directory, { recursive: true });
+  await writeFile(filePath, content);
+}
+
+function safePathSegment(value) {
+  return value.replace(/[^A-Za-z0-9_.-]/g, "_");
+}
+
+function safeFileName(value) {
+  const sanitized = value.replace(/[<>:"/\\|?*\x00-\x1F]/g, "_").trim();
+  return sanitized || "upload.bin";
 }
 
 function sendJson(response, statusCode, payload) {

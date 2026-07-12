@@ -132,6 +132,32 @@ paths:
           description: Deleted.
         "404":
           $ref: "#/components/responses/NotFound"
+  /documents/{id}/file:
+    post:
+      operationId: uploadDocumentFile
+      parameters:
+        - $ref: "#/components/parameters/Id"
+        - name: x-file-name
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "202":
+          description: File stored and processing job queued.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadDocumentFileResult"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /documents/{id}/process:
     post:
       operationId: processDocument
@@ -264,6 +290,16 @@ components:
         updatedAt:
           type: string
           format: date-time
+        fileName:
+          type: string
+        mimeType:
+          type: string
+        size:
+          type: integer
+          minimum: 0
+        fileStoredAt:
+          type: string
+          format: date-time
     CreateDocumentInput:
       type: object
       required: [workspaceId, title]
@@ -312,3 +348,11 @@ components:
         createdAt:
           type: string
           format: date-time
+    UploadDocumentFileResult:
+      type: object
+      required: [document, job]
+      properties:
+        document:
+          $ref: "#/components/schemas/Document"
+        job:
+          $ref: "#/components/schemas/ProcessingJob"

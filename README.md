@@ -10,6 +10,7 @@ This workspace implements the runtime-independent platform described in the temp
 - Node HTTP backend as one replaceable runtime host
 - local web host for workspaces, documents, and processing jobs
 - background worker lifecycle for queued jobs
+- local file ingestion with document metadata stored in SQLite
 
 The key idea is that hosts, backends, databases, and workers can change while the domain workflow and public contract stay stable.
 
@@ -40,6 +41,7 @@ npm start
 The backend listens on `http://localhost:3000` by default.
 Open `http://localhost:3000` for the web workspace.
 Data is stored locally in `data/platform.sqlite`.
+Uploaded files are stored locally under `data/files/`.
 
 The browser calls the backend through `apps/web/public/apiClient.js`, whose
 operation names match `contracts/openapi.yaml`.

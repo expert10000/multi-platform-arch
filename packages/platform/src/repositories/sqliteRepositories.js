@@ -90,7 +90,9 @@ class SqliteDocumentRepository {
     return this.database
       .prepare(
         `SELECT id, workspace_id AS workspaceId, title, status, tags,
-                created_at AS createdAt, updated_at AS updatedAt
+                created_at AS createdAt, updated_at AS updatedAt,
+                file_name AS fileName, mime_type AS mimeType, size,
+                file_stored_at AS fileStoredAt
          FROM documents
          WHERE workspace_id = ?
          ORDER BY updated_at DESC`
@@ -103,7 +105,9 @@ class SqliteDocumentRepository {
     const row = this.database
       .prepare(
         `SELECT id, workspace_id AS workspaceId, title, status, tags,
-                created_at AS createdAt, updated_at AS updatedAt
+                created_at AS createdAt, updated_at AS updatedAt,
+                file_name AS fileName, mime_type AS mimeType, size,
+                file_stored_at AS fileStoredAt
          FROM documents
          WHERE id = ?`
       )
@@ -115,8 +119,9 @@ class SqliteDocumentRepository {
     this.database
       .prepare(
         `INSERT INTO documents
-           (id, workspace_id, title, status, tags, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
+           (id, workspace_id, title, status, tags, created_at, updated_at,
+            file_name, mime_type, size, file_stored_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         document.id,
@@ -125,7 +130,11 @@ class SqliteDocumentRepository {
         document.status,
         JSON.stringify(document.tags),
         document.createdAt,
-        document.updatedAt
+        document.updatedAt,
+        document.fileName ?? null,
+        document.mimeType ?? null,
+        document.size ?? null,
+        document.fileStoredAt ?? null
       );
     return document;
   }
@@ -134,7 +143,8 @@ class SqliteDocumentRepository {
     const result = this.database
       .prepare(
         `UPDATE documents
-         SET title = ?, status = ?, tags = ?, updated_at = ?
+         SET title = ?, status = ?, tags = ?, updated_at = ?,
+             file_name = ?, mime_type = ?, size = ?, file_stored_at = ?
          WHERE id = ?`
       )
       .run(
@@ -142,6 +152,10 @@ class SqliteDocumentRepository {
         document.status,
         JSON.stringify(document.tags),
         document.updatedAt,
+        document.fileName ?? null,
+        document.mimeType ?? null,
+        document.size ?? null,
+        document.fileStoredAt ?? null,
         document.id
       );
 
@@ -271,11 +285,31 @@ function migrate(database) {
     CREATE INDEX IF NOT EXISTS idx_jobs_document
       ON jobs(document_id);
   `);
+  ensureColumn(database, "documents", "file_name", "TEXT");
+  ensureColumn(database, "documents", "mime_type", "TEXT");
+  ensureColumn(database, "documents", "size", "INTEGER");
+  ensureColumn(database, "documents", "file_stored_at", "TEXT");
 }
 
 function mapDocumentRow(row) {
-  return {
+  const document = {
     ...row,
     tags: JSON.parse(row.tags)
   };
+  for (const key of ["fileName", "mimeType", "size", "fileStoredAt"]) {
+    if (document[key] === null) {
+      delete document[key];
+    }
+  }
+  return document;
+}
+
+function ensureColumn(database, tableName, columnName, definition) {
+  const columns = database
+    .prepare(`PRAGMA table_info(${tableName})`)
+    .all()
+    .map((column) => column.name);
+  if (!columns.includes(columnName)) {
+    database.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
+  }
 }

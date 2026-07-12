@@ -190,8 +190,9 @@ function renderDocuments() {
         tableCell(documentItem.title),
         tableCell(statusBadge(documentItem.status)),
         tableCell(tagList(documentItem.tags)),
+        tableCell(fileDetails(documentItem)),
         tableCell(formatDate(documentItem.updatedAt)),
-        tableCell(processButton(documentItem.id))
+        tableCell(actionGroup(documentItem.id))
       );
 
       return row;
@@ -271,6 +272,54 @@ function tagList(tags) {
   return wrap;
 }
 
+function fileDetails(documentItem) {
+  const wrap = document.createElement("div");
+  wrap.className = "file-meta";
+  if (!documentItem.fileName) {
+    wrap.textContent = "No file";
+    return wrap;
+  }
+
+  const name = document.createElement("strong");
+  name.textContent = documentItem.fileName;
+  const details = document.createElement("small");
+  details.textContent = `${formatBytes(documentItem.size)} ${documentItem.mimeType}`;
+  wrap.append(name, details);
+  return wrap;
+}
+
+function actionGroup(documentId) {
+  const wrap = document.createElement("div");
+  wrap.className = "action-group";
+  wrap.append(uploadButton(documentId), processButton(documentId));
+  return wrap;
+}
+
+function uploadButton(documentId) {
+  const label = document.createElement("label");
+  label.className = "ghost file-upload";
+  label.textContent = "Upload";
+
+  const input = document.createElement("input");
+  input.type = "file";
+  input.addEventListener("change", () => {
+    const [file] = input.files;
+    if (!file) {
+      return;
+    }
+    runAction(async () => {
+      await platformApi.uploadDocumentFile(documentId, file);
+      await refreshActiveWorkspace();
+      render();
+      showToast("File uploaded and processing queued.");
+    });
+    input.value = "";
+  });
+
+  label.append(input);
+  return label;
+}
+
 function processButton(documentId) {
   const button = document.createElement("button");
   button.className = "ghost";
@@ -278,6 +327,19 @@ function processButton(documentId) {
   button.textContent = "Process";
   button.addEventListener("click", () => processDocument(documentId));
   return button;
+}
+
+function formatBytes(size) {
+  if (!Number.isFinite(size)) {
+    return "";
+  }
+  if (size < 1024) {
+    return `${size} B`;
+  }
+  if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)} KB`;
+  }
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
 }
 
 function setDocumentFormEnabled(enabled) {

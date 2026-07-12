@@ -336,7 +336,7 @@ button:focus-visible {
 
 table {
   width: 100%;
-  min-width: 720px;
+  min-width: 860px;
   border-collapse: collapse;
 }
 
@@ -398,6 +398,45 @@ td {
   color: var(--blue);
   font-size: 12px;
   font-weight: 700;
+}
+
+.file-meta {
+  display: grid;
+  gap: 2px;
+  color: var(--muted);
+}
+
+.file-meta strong {
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.file-meta small {
+  font-size: 12px;
+}
+
+.action-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.file-upload {
+  display: inline-grid;
+  place-items: center;
+  min-width: 74px;
+  color: var(--ink);
+  font-size: 13px;
+  text-transform: none;
+}
+
+.file-upload input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .empty {

@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import { createServer } from "../apps/node-backend/src/server.js";
+import { createPlatformApi } from "../apps/web/public/apiClient.js";
 
 test("serves the local web host from the backend root", async () => {
   const { server, baseUrl } = await startServer();
@@ -37,8 +41,38 @@ test("supports workspace, document, and job flow through HTTP", async () => {
   }
 });
 
-async function startServer() {
-  const server = createServer();
+test("uploads document files to local storage and records metadata", async () => {
+  const fileStorageRoot = await mkdtemp(join(tmpdir(), "dzone-files-"));
+  const { server, baseUrl } = await startServer({ fileStorageRoot });
+  const api = createPlatformApi({ baseUrl });
+
+  try {
+    const workspace = await api.createWorkspace({ name: "File Workspace" });
+    const document = await api.createDocument({
+      workspaceId: workspace.id,
+      title: "Uploaded Document"
+    });
+    const upload = await api.uploadDocumentFile(
+      document.id,
+      new File(["hello file"], "hello.txt", { type: "text/plain" })
+    );
+
+    const uploadedNames = await readdir(join(fileStorageRoot, document.id));
+    const uploadedContent = await readFile(join(fileStorageRoot, document.id, uploadedNames[0]), "utf8");
+
+    assert.equal(upload.document.fileName, "hello.txt");
+    assert.equal(upload.document.mimeType, "text/plain");
+    assert.equal(upload.document.size, 10);
+    assert.equal(upload.job.status, "queued");
+    assert.equal(uploadedContent, "hello file");
+  } finally {
+    server.close();
+    await rm(fileStorageRoot, { recursive: true, force: true });
+  }
+});
+
+async function startServer(options) {
+  const server = createServer(undefined, options);
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address();
   return { server, baseUrl: `http://127.0.0.1:${port}` };

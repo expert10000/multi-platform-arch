@@ -18,6 +18,11 @@ test("persists workspaces, documents, and jobs across platform instances", async
       title: "Persistent Document",
       tags: ["sqlite", "contract"]
     });
+    await firstService.attachDocumentFile(document.id, {
+      fileName: "persistent.txt",
+      mimeType: "text/plain",
+      size: 16
+    });
     const job = await firstService.processDocument(document.id, "index-search");
     firstPlatform.close();
 
@@ -30,6 +35,9 @@ test("persists workspaces, documents, and jobs across platform instances", async
     assert.equal(workspaces[0].name, "Persistent Workspace");
     assert.equal(documents[0].title, "Persistent Document");
     assert.deepEqual(documents[0].tags, ["sqlite", "contract"]);
+    assert.equal(documents[0].fileName, "persistent.txt");
+    assert.equal(documents[0].mimeType, "text/plain");
+    assert.equal(documents[0].size, 16);
     assert.equal(jobs[0].id, job.id);
     secondPlatform.close();
   } finally {

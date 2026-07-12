@@ -9,6 +9,7 @@ export const apiOperations = Object.freeze({
   updateDocument: "PUT /documents/{id}",
   deleteDocument: "DELETE /documents/{id}",
   processDocument: "POST /documents/{id}/process",
+  uploadDocumentFile: "POST /documents/{id}/file",
   listJobs: "GET /jobs",
   getJob: "GET /jobs/{id}"
 });
@@ -71,6 +72,10 @@ export function createPlatformApi({ baseUrl = "" } = {}) {
       });
     },
 
+    uploadDocumentFile(id, file) {
+      return requestFile(baseUrl, `/documents/${encodeId(id)}/file`, file);
+    },
+
     listJobs(documentId) {
       const query = documentId ? `?documentId=${encodeId(documentId)}` : "";
       return request(baseUrl, `/jobs${query}`);
@@ -96,6 +101,24 @@ async function request(baseUrl, path, options = {}) {
 
   if (response.status === 204) {
     return null;
+  }
+
+  return response.json();
+}
+
+async function requestFile(baseUrl, path, file) {
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: "POST",
+    headers: {
+      "content-type": file.type || "application/octet-stream",
+      "x-file-name": encodeURIComponent(file.name || "upload.bin")
+    },
+    body: file
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: "Request failed." }));
+    throw new Error(error.error);
   }
 
   return response.json();

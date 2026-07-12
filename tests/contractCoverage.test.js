@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import { createServer } from "../apps/node-backend/src/server.js";
 import {
@@ -23,7 +25,8 @@ test("browser API client exposes every OpenAPI operation", async () => {
 });
 
 test("backend covers every OpenAPI operation", async () => {
-  const { server, baseUrl } = await startServer();
+  const fileStorageRoot = await mkdtemp(join(tmpdir(), "dzone-contract-files-"));
+  const { server, baseUrl } = await startServer({ fileStorageRoot });
   const api = createPlatformApi({ baseUrl });
   const coveredOperations = new Set();
 
@@ -68,6 +71,14 @@ test("backend covers every OpenAPI operation", async () => {
     coveredOperations.add("updateDocument");
     assert.equal(updatedDocument.status, "review");
 
+    const upload = await api.uploadDocumentFile(
+      document.id,
+      new File(["contract file"], "contract.txt", { type: "text/plain" })
+    );
+    coveredOperations.add("uploadDocumentFile");
+    assert.equal(upload.document.fileName, "contract.txt");
+    assert.equal(upload.job.documentId, document.id);
+
     const job = await api.processDocument(document.id, {
       type: "extract-text"
     });
@@ -75,7 +86,7 @@ test("backend covers every OpenAPI operation", async () => {
 
     const allJobs = await api.listJobs();
     coveredOperations.add("listJobs");
-    assert.equal(allJobs.length, 1);
+    assert.equal(allJobs.length, 2);
 
     const fetchedJob = await api.getJob(job.id);
     coveredOperations.add("getJob");
@@ -91,6 +102,7 @@ test("backend covers every OpenAPI operation", async () => {
     );
   } finally {
     server.close();
+    await rm(fileStorageRoot, { recursive: true, force: true });
   }
 });
 
@@ -139,8 +151,8 @@ async function readOpenApiOperations() {
   return operations;
 }
 
-async function startServer() {
-  const server = createServer();
+async function startServer(options) {
+  const server = createServer(undefined, options);
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address();
   return { server, baseUrl: `http://127.0.0.1:${port}` };

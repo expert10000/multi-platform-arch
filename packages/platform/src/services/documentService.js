@@ -97,6 +97,21 @@ export class DocumentService {
     await this.documents.delete(id);
   }
 
+  async attachDocumentFile(id, input) {
+    const existing = await this.getDocument(id);
+    const size = validateFileSize(input?.size);
+    const updated = {
+      ...existing,
+      fileName: requireText(input?.fileName, "File name"),
+      mimeType: requireText(input?.mimeType, "MIME type"),
+      size,
+      fileStoredAt: nowIso(),
+      updatedAt: nextTimestampAfter(existing.updatedAt)
+    };
+
+    return this.documents.update(updated);
+  }
+
   async searchDocuments(workspaceId, query) {
     await this.getWorkspace(workspaceId);
     return this.documents.search(workspaceId, requireText(query, "Query"));
@@ -162,6 +177,13 @@ function validateDocumentStatus(status) {
   if (!isDocumentStatus(status)) {
     throw new ValidationError(`Unsupported document status '${status}'.`);
   }
+}
+
+function validateFileSize(size) {
+  if (!Number.isInteger(size) || size <= 0) {
+    throw new ValidationError("File size must be a positive integer.");
+  }
+  return size;
 }
 
 function nextTimestampAfter(previousTimestamp) {
