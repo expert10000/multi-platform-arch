@@ -315,6 +315,114 @@ button:focus-visible {
   color: var(--accent-strong);
 }
 
+.implementation-panel {
+  overflow: hidden;
+}
+
+.implementation-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.implementation-tab {
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 10px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.implementation-tab.active {
+  border-color: rgba(36, 90, 141, 0.45);
+  background: #edf3fa;
+  color: var(--blue);
+}
+
+.implementation-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px;
+}
+
+.implementation-card {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 178px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 13px;
+  background: #fff;
+}
+
+.implementation-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.implementation-card h4 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.implementation-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.runtime-badge {
+  border-radius: 8px;
+  padding: 4px 7px;
+  background: #eef2f4;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.runtime-badge.running {
+  background: #e8f6ee;
+  color: #17633b;
+}
+
+.runtime-badge.available {
+  background: #edf3fa;
+  color: var(--blue);
+}
+
+.runtime-badge.planned {
+  background: #fff5df;
+  color: #8a5b00;
+}
+
+.implementation-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.implementation-facts span {
+  border-radius: 8px;
+  padding: 5px 8px;
+  background: #f6f8f9;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .architecture-detail {
   display: grid;
   gap: 10px;
@@ -512,7 +620,8 @@ td {
 
 @media (max-width: 920px) {
   .shell,
-  .content-grid {
+  .content-grid,
+  .implementation-grid {
     grid-template-columns: 1fr;
   }
 
@@ -548,5 +657,9 @@ td {
   .panel-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .implementation-tabs {
+    grid-template-columns: 1fr;
   }
 }

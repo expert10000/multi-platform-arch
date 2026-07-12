@@ -10,7 +10,7 @@
     <header class="topbar">
       <div>
         <p class="eyebrow">DZONE Shared Platform</p>
-        <h1>Workspace Operations</h1>
+        <h1>Central Admin Console</h1>
       </div>
       <div class="runtime" id="runtimeStatus">Checking runtime</div>
     </header>
@@ -94,6 +94,21 @@
             <div class="architecture-detail" id="architectureDetail" role="tabpanel" aria-live="polite"></div>
           </section>
         </div>
+
+        <section class="panel implementation-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Runtime Implementations</p>
+              <h3>Hosts, Backends, Workers</h3>
+            </div>
+          </div>
+          <div class="implementation-tabs" id="implementationTabs" role="tablist" aria-label="Runtime implementation sections">
+            <button class="implementation-tab active" type="button" role="tab" aria-selected="true" data-implementation-section="hosts">Hosts</button>
+            <button class="implementation-tab" type="button" role="tab" aria-selected="false" data-implementation-section="backends">Backends</button>
+            <button class="implementation-tab" type="button" role="tab" aria-selected="false" data-implementation-section="workers">Workers</button>
+          </div>
+          <div class="implementation-grid" id="implementationDetail" role="tabpanel" aria-live="polite"></div>
+        </section>
 
         <section class="panel table-panel">
           <div class="panel-header">

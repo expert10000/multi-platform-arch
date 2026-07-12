@@ -24,6 +24,8 @@ The API boundary is described in `contracts/openapi.yaml`. Backends should imple
 
 The current browser client uses operation names that match the OpenAPI `operationId` values. Contract coverage tests compare those names against the OpenAPI document and exercise each route through the backend.
 
+The web host currently acts as the central admin console. It manages workspaces, documents, uploads, processing jobs, and runtime visibility for hosts, backends, and workers.
+
 ## Runtime Hosts
 
 The included Node backend is intentionally small and dependency-free. It demonstrates how a backend runtime can expose the shared platform through HTTP without owning the business logic. In local mode it uses SQLite storage at `data/platform.sqlite`.

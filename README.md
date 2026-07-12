@@ -40,11 +40,11 @@ npm start
 ```
 
 The backend listens on `http://localhost:3000` by default.
-Open `http://localhost:3000` for the web workspace.
+Open `http://localhost:3000` for the central admin console.
 Data is stored locally in `data/platform.sqlite`.
 Uploaded files are stored locally under `data/files/`.
 
-The browser host calls the backend through `apps/hosts/web/public/apiClient.js`, whose
+The browser host is the central admin console. It calls the backend through `apps/hosts/web/public/apiClient.js`, whose
 operation names match `contracts/openapi.yaml`.
 Processing jobs are picked up by the local worker and move from `queued` to
 `running` to `completed`.

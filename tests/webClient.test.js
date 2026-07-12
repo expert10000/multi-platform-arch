@@ -22,3 +22,19 @@ test("platform architecture panel exposes clickable sections", async () => {
 
   assert.match(appSource, /renderArchitecture/);
 });
+
+test("central admin exposes hosts backends and workers panels", async () => {
+  const html = await readFile(new URL("../apps/hosts/web/public/index.html", import.meta.url), "utf8");
+  const appSource = await readFile(new URL("../apps/hosts/web/public/app.js", import.meta.url), "utf8");
+
+  for (const section of ["hosts", "backends", "workers"]) {
+    assert.match(html, new RegExp(`data-implementation-section="${section}"`));
+    assert.match(appSource, new RegExp(`${section}: \\[`));
+  }
+
+  assert.match(html, /Central Admin Console/);
+  assert.match(appSource, /Node Backend/);
+  assert.match(appSource, /Python Backend/);
+  assert.match(appSource, /\.NET MAUI Host/);
+  assert.match(appSource, /Electron Host/);
+});

@@ -13,7 +13,7 @@ test("serves the local web host from the backend root", async () => {
     const html = await response.text();
 
     assert.equal(response.status, 200);
-    assert.match(html, /Workspace Operations/);
+    assert.match(html, /Central Admin Console/);
   } finally {
     server.close();
   }

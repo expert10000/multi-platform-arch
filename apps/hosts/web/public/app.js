@@ -4,8 +4,10 @@ const state = {
   workspaces: [],
   documents: [],
   jobs: [],
+  runtimeName: "unknown",
   activeWorkspaceId: null,
-  activeArchitectureSection: "models"
+  activeArchitectureSection: "models",
+  activeImplementationSection: "hosts"
 };
 
 const architectureSections = {
@@ -62,6 +64,8 @@ const elements = {
   refreshButton: document.querySelector("#refreshButton"),
   platformTabs: document.querySelector("#platformTabs"),
   architectureDetail: document.querySelector("#architectureDetail"),
+  implementationTabs: document.querySelector("#implementationTabs"),
+  implementationDetail: document.querySelector("#implementationDetail"),
   toast: document.querySelector("#toast")
 };
 
@@ -92,6 +96,15 @@ elements.platformTabs.addEventListener("click", (event) => {
   renderArchitecture();
 });
 
+elements.implementationTabs.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-implementation-section]");
+  if (!button) {
+    return;
+  }
+  state.activeImplementationSection = button.dataset.implementationSection;
+  renderImplementations();
+});
+
 await initialize();
 window.setInterval(() => {
   if (state.activeWorkspaceId) {
@@ -112,8 +125,10 @@ async function initialize() {
 async function loadHealth() {
   try {
     const health = await platformApi.getHealth();
+    state.runtimeName = health.runtime;
     elements.runtimeStatus.textContent = health.ok ? `${health.runtime} runtime online` : "Runtime unavailable";
   } catch {
+    state.runtimeName = "unavailable";
     elements.runtimeStatus.textContent = "Runtime unavailable";
   }
 }
@@ -206,6 +221,7 @@ function render() {
   renderDocuments();
   renderJobs();
   renderArchitecture();
+  renderImplementations();
 }
 
 function renderWorkspaces() {
@@ -308,6 +324,143 @@ function renderArchitecture() {
   }
 
   elements.architectureDetail.replaceChildren(title, summary, list);
+}
+
+function renderImplementations() {
+  const metrics = adminMetrics();
+  const section = implementationSections(metrics)[state.activeImplementationSection];
+
+  for (const button of elements.implementationTabs.querySelectorAll("[data-implementation-section]")) {
+    const isActive = button.dataset.implementationSection === state.activeImplementationSection;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
+  }
+
+  elements.implementationDetail.replaceChildren(
+    ...section.map((implementation) => implementationCard(implementation))
+  );
+}
+
+function implementationSections(metrics) {
+  return {
+    hosts: [
+      {
+        name: "Web Host",
+        status: "Running",
+        summary: "Central admin for workspaces, documents, uploads, jobs, and runtime visibility.",
+        facts: [
+          `${metrics.workspaces} workspaces visible`,
+          `${metrics.documents} documents visible`,
+          `${metrics.jobs} jobs monitored`
+        ]
+      },
+      {
+        name: ".NET MAUI Host",
+        status: "Planned",
+        summary: "Native desktop/mobile host for document review, workspace browsing, and job status.",
+        facts: ["Consumes OpenAPI", "Uses same DTOs", "Can target Windows, macOS, Android, iOS"]
+      },
+      {
+        name: "Electron Host",
+        status: "Planned",
+        summary: "Desktop shell for local files, offline workspace support, and backend switching.",
+        facts: ["Can use local SQLite", "Can call Node or Python backend", "Good fit for file-heavy workflows"]
+      }
+    ],
+    backends: [
+      {
+        name: "Node Backend",
+        status: state.runtimeName === "node" ? "Running" : "Available",
+        summary: "Primary backend implementation with SQLite metadata, local file storage, and worker startup.",
+        facts: [
+          `${metrics.uploadedFiles} files ingested`,
+          `${metrics.completedJobs} completed jobs`,
+          `${metrics.failedJobs} failed jobs`
+        ]
+      },
+      {
+        name: "Python Backend",
+        status: state.runtimeName === "python" ? "Running" : "Available",
+        summary: "Interchangeable backend using the same contract with in-memory metadata and local file bytes.",
+        facts: ["Implements workspaces", "Implements documents and uploads", "Implements jobs"]
+      },
+      {
+        name: "Future Backends",
+        status: "Planned",
+        summary: "ASP.NET Core, Spring Boot, FastAPI, and Go can implement the same OpenAPI surface.",
+        facts: ["Same contracts", "Own persistence choices", "No host rewrite required"]
+      }
+    ],
+    workers: [
+      {
+        name: "Document Worker",
+        status: "Running",
+        summary: "Processes queued document jobs through the shared worker lifecycle.",
+        facts: [
+          `${metrics.queuedJobs} queued`,
+          `${metrics.runningJobs} running`,
+          `${metrics.completedJobs} completed`
+        ]
+      },
+      {
+        name: "Python Worker",
+        status: "Planned",
+        summary: "Specialized worker for text extraction, OCR, summaries, embeddings, and semantic search.",
+        facts: ["Can consume same job protocol", "Good fit for AI/OCR libraries", "Can run out of process"]
+      },
+      {
+        name: "Search Worker",
+        status: "Planned",
+        summary: "Indexes extracted document content and metadata for cross-host search.",
+        facts: ["Indexes files", "Indexes tags", "Publishes job results"]
+      }
+    ]
+  };
+}
+
+function implementationCard(implementation) {
+  const article = document.createElement("article");
+  article.className = "implementation-card";
+
+  const header = document.createElement("div");
+  header.className = "implementation-card-header";
+  const title = document.createElement("h4");
+  title.textContent = implementation.name;
+  const status = document.createElement("span");
+  status.className = `runtime-badge ${implementation.status.toLowerCase()}`;
+  status.textContent = implementation.status;
+  header.append(title, status);
+
+  const summary = document.createElement("p");
+  summary.textContent = implementation.summary;
+
+  const facts = document.createElement("div");
+  facts.className = "implementation-facts";
+  for (const fact of implementation.facts) {
+    const item = document.createElement("span");
+    item.textContent = fact;
+    facts.append(item);
+  }
+
+  article.append(header, summary, facts);
+  return article;
+}
+
+function adminMetrics() {
+  return {
+    workspaces: state.workspaces.length,
+    documents: state.documents.length,
+    jobs: state.jobs.length,
+    uploadedFiles: state.documents.filter((documentItem) => documentItem.fileName).length,
+    queuedJobs: countJobsByStatus("queued"),
+    runningJobs: countJobsByStatus("running"),
+    completedJobs: countJobsByStatus("completed"),
+    failedJobs: countJobsByStatus("failed")
+  };
+}
+
+function countJobsByStatus(status) {
+  return state.jobs.filter((job) => job.status === status).length;
 }
 
 function tableCell(content) {
