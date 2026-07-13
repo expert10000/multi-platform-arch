@@ -7,6 +7,7 @@ import {
   createElectronHostController,
   createElectronHostLauncher,
   createDotnetDesktopHostController,
+  createMauiSetupRunner,
   createServer
 } from "../apps/backends/node/src/server.js";
 import { createPlatformApi } from "../apps/hosts/shared/public/apiClient.js";
@@ -172,6 +173,28 @@ test("launches the .NET Desktop host through a local runtime command", async () 
   }
 });
 
+test("runs optional MAUI setup through the backend", async () => {
+  const setups = [];
+  const { server, baseUrl } = await startServer({
+    setupMauiHost: async () => {
+      setups.push({});
+      return { host: "maui", status: "starting", command: "dotnet workload install maui" };
+    }
+  });
+  const api = createPlatformApi({ baseUrl });
+
+  try {
+    const result = await api.setupMauiHost();
+
+    assert.equal(result.host, "maui");
+    assert.equal(result.status, "starting");
+    assert.equal(result.command, "dotnet workload install maui");
+    assert.equal(setups.length, 1);
+  } finally {
+    server.close();
+  }
+});
+
 test("electron launcher starts the desktop executable without a shell", async () => {
   const hostRoot = process.platform === "win32" ? "C:\\host" : "/tmp/host";
   const launches = [];
@@ -311,6 +334,44 @@ test("dotnet desktop controller starts and stops the desktop host", async () => 
   assert.deepEqual(launches[0].args, ["run", "--project", "DzoneDotnetDesktopHost.csproj", "--no-launch-profile"]);
   assert.equal(launches[0].options.windowsHide, true);
   assert.deepEqual(stops, [456]);
+});
+
+test("MAUI setup runner starts the installer once in the background", async () => {
+  const launches = [];
+  let unrefCalled = false;
+  const runner = createMauiSetupRunner({
+    scriptPath: process.platform === "win32" ? "C:\\repo\\scripts\\install-maui-workload.ps1" : "/repo/scripts/install-maui-workload.ps1",
+    workingDirectory: process.platform === "win32" ? "C:\\repo" : "/repo",
+    spawnProcess: (file, args, options) => {
+      launches.push({ file, args, options });
+      return {
+        exitCode: null,
+        signalCode: null,
+        pid: 789,
+        once() {
+          return undefined;
+        },
+        unref() {
+          unrefCalled = true;
+        }
+      };
+    },
+    isProcessRunning: (childProcess) => Boolean(childProcess)
+  });
+
+  const firstSetup = await runner();
+  const secondSetup = await runner();
+
+  assert.equal(firstSetup.status, "starting");
+  assert.equal(secondSetup.status, "running");
+  assert.equal(launches.length, 1);
+  assert.match(launches[0].file, process.platform === "win32" ? /powershell\.exe$/ : /pwsh$/);
+  assert.deepEqual(launches[0].args.slice(0, 3), ["-NoProfile", "-ExecutionPolicy", "Bypass"]);
+  assert.equal(launches[0].args[3], "-File");
+  assert.match(launches[0].args[4], /install-maui-workload\.ps1$/);
+  assert.equal(launches[0].options.shell, false);
+  assert.equal(launches[0].options.windowsHide, true);
+  assert.equal(unrefCalled, true);
 });
 
 async function startServer(options) {

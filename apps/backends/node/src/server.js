@@ -11,6 +11,8 @@ const webPublicRoot = fileURLToPath(new URL("../../../hosts/web/public", import.
 const sharedPublicRoot = fileURLToPath(new URL("../../../hosts/shared/public", import.meta.url));
 const electronHostRoot = fileURLToPath(new URL("../../../hosts/electron/", import.meta.url));
 const dotnetDesktopHostRoot = fileURLToPath(new URL("../../../hosts/dotnet-desktop/", import.meta.url));
+const repoRoot = fileURLToPath(new URL("../../../../", import.meta.url));
+const mauiInstallScript = fileURLToPath(new URL("../../../../scripts/install-maui-workload.ps1", import.meta.url));
 const defaultFileStorageRoot = fileURLToPath(new URL("../../../../data/files/", import.meta.url));
 
 export function createServer(
@@ -22,7 +24,8 @@ export function createServer(
     launchElectronHost,
     closeElectronHost,
     launchDotnetDesktopHost,
-    closeDotnetDesktopHost
+    closeDotnetDesktopHost,
+    setupMauiHost
   } = options;
   const electronHostController =
     launchElectronHost || closeElectronHost
@@ -38,6 +41,7 @@ export function createServer(
           closeDotnetDesktopHost: closeDotnetDesktopHost ?? defaultCloseDotnetDesktopHost
         }
       : createDotnetDesktopHostController();
+  const mauiSetup = setupMauiHost ?? createMauiSetupRunner();
   const service = platform.services.documents;
 
   return createHttpServer(async (request, response) => {
@@ -75,6 +79,10 @@ export function createServer(
 
       if (method === "POST" && path === "/runtime/hosts/dotnet-desktop/close") {
         return sendJson(response, 202, await dotnetDesktopHostController.closeDotnetDesktopHost({ backendUrl: requestBaseUrl(request) }));
+      }
+
+      if (method === "POST" && path === "/runtime/hosts/maui/setup") {
+        return sendJson(response, 202, await mauiSetup());
       }
 
       if (method === "GET" && path === "/workspaces") {
@@ -260,6 +268,36 @@ export function createDotnetDesktopHostController({
   };
 }
 
+export function createMauiSetupRunner({
+  scriptPath = mauiInstallScript,
+  workingDirectory = repoRoot,
+  spawnProcess = spawn,
+  isProcessRunning = isChildProcessRunning
+} = {}) {
+  let setupProcess = null;
+
+  return async function setupMauiHost() {
+    if (isProcessRunning(setupProcess)) {
+      return { host: "maui", status: "running", command: "dotnet workload install maui" };
+    }
+    setupProcess = null;
+
+    setupProcess = spawnProcess(mauiSetupExecutable(), mauiSetupArgs(scriptPath), {
+      cwd: workingDirectory,
+      detached: true,
+      shell: false,
+      stdio: "ignore",
+      windowsHide: true
+    });
+    setupProcess.once?.("exit", () => {
+      setupProcess = null;
+    });
+    setupProcess.unref?.();
+
+    return { host: "maui", status: "starting", command: "dotnet workload install maui" };
+  };
+}
+
 function electronLaunchCommand(hostRoot, fileExists) {
   const executablePath =
     process.platform === "win32"
@@ -312,6 +350,14 @@ function dotnetDesktopLaunchCommand(hostRoot, fileExists) {
     args: ["run", "--project", "DzoneDotnetDesktopHost.csproj", "--no-launch-profile"],
     windowsHide: true
   };
+}
+
+function mauiSetupExecutable() {
+  return process.platform === "win32" ? "powershell.exe" : "pwsh";
+}
+
+function mauiSetupArgs(scriptPath) {
+  return ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptPath];
 }
 
 function isChildProcessRunning(childProcess) {

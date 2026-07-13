@@ -369,9 +369,10 @@ function implementationSections(metrics) {
         name: ".NET MAUI Desktop",
         status: "Optional",
         summary: "Optional MAUI desktop host for teams that want the MAUI workload and cross-device UI path.",
+        setupCommand: "setupMauiHost",
         infoCommand: "showMauiInstallMessage",
-        action: "MAUI Setup",
-        facts: ["Install: dotnet workload install maui", "Optional host", "Future mobile path"]
+        action: "Install MAUI",
+        facts: ["Runs optional setup script", "Command: dotnet workload install maui", "Default host still works without MAUI"]
       },
       {
         name: "Electron Host",
@@ -484,11 +485,19 @@ function implementationCard(implementation) {
     button.addEventListener("click", () => closeHost(implementation.stopCommand));
     article.append(button);
   }
+  if (implementation.setupCommand) {
+    const button = document.createElement("button");
+    button.className = "implementation-link";
+    button.type = "button";
+    button.textContent = implementation.action ?? "Setup";
+    button.addEventListener("click", () => setupHost(implementation.setupCommand));
+    article.append(button);
+  }
   if (implementation.infoCommand === "showMauiInstallMessage") {
     const button = document.createElement("button");
     button.className = "implementation-link";
     button.type = "button";
-    button.textContent = implementation.action ?? "Details";
+    button.textContent = "Setup Command";
     button.addEventListener("click", showMauiInstallMessage);
     article.append(button);
   }
@@ -510,12 +519,25 @@ async function closeHost(command) {
   });
 }
 
+async function setupHost(command) {
+  await runAction(async () => {
+    const result = await platformApi[command]();
+    showToast(result.status === "running" ? `${hostLabel(result.host)} is already running.` : `${hostLabel(result.host)} installer started.`);
+  });
+}
+
 function hostLabel(host) {
-  return host === "dotnet-desktop" ? ".NET desktop" : "Desktop";
+  if (host === "dotnet-desktop") {
+    return ".NET desktop";
+  }
+  if (host === "maui") {
+    return ".NET MAUI";
+  }
+  return "Desktop";
 }
 
 function showMauiInstallMessage() {
-  showToast("Install MAUI with: dotnet workload install maui");
+  showToast("Optional setup runs: dotnet workload install maui");
 }
 
 function adminMetrics() {

@@ -44,6 +44,8 @@ test("central admin exposes hosts backends and workers panels", async () => {
   assert.match(appSource, /closeDotnetDesktopHost/);
   assert.match(appSource, /\.NET MAUI Desktop/);
   assert.match(appSource, /dotnet workload install maui/);
+  assert.match(appSource, /Install MAUI/);
+  assert.match(appSource, /setupMauiHost/);
   assert.match(appSource, /Electron Host/);
   assert.match(appSource, /Launch Desktop/);
   assert.match(appSource, /Stop Desktop/);

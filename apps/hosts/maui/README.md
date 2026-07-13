@@ -16,6 +16,9 @@ Or use the repository helper:
 npm run setup:host:maui
 ```
 
+You can also start the same optional setup from the Admin console with the
+`Install MAUI` action on the .NET MAUI Desktop card.
+
 Check whether the workload is already installed:
 
 ```bash

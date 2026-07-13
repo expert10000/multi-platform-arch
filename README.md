@@ -100,6 +100,9 @@ when you want to build the MAUI desktop/mobile path:
 npm run setup:host:maui
 ```
 
+The Admin console also exposes this as an explicit `Install MAUI` setup action.
+It runs the same helper script and does not install anything until clicked.
+
 Check the optional workload without installing:
 
 ```bash

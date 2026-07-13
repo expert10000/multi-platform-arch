@@ -56,6 +56,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RuntimeHostLaunchResult"
+  /runtime/hosts/maui/setup:
+    post:
+      operationId: setupMauiHost
+      responses:
+        "202":
+          description: Optional .NET MAUI workload setup requested.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeHostSetupResult"
   /workspaces:
     get:
       operationId: listWorkspaces
@@ -407,4 +417,16 @@ components:
           type: string
           enum: [starting, running, stopping, stopped]
         backendUrl:
+          type: string
+    RuntimeHostSetupResult:
+      type: object
+      required: [host, status, command]
+      properties:
+        host:
+          type: string
+          enum: [maui]
+        status:
+          type: string
+          enum: [starting, running]
+        command:
           type: string
