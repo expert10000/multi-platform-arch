@@ -376,14 +376,17 @@ function implementationSections(metrics) {
       },
       {
         name: ".NET MAUI Desktop",
-        status: "Optional",
-        summary: "Optional MAUI desktop host for teams that want the MAUI workload and cross-device UI path.",
+        status: "Available",
+        summary: "Optional MAUI desktop host for teams that want a cross-device UI path on the same shared contract.",
+        command: "launchMauiHost",
+        stopCommand: "closeMauiHost",
         setupCommand: "setupMauiHost",
         statusCommand: "getMauiSetupStatus",
         statusView: "mauiSetup",
         infoCommand: "showMauiInstallMessage",
-        action: "Install MAUI",
-        facts: ["Runs optional setup script", "Command: dotnet workload install maui", "Default host still works without MAUI"]
+        action: "Launch MAUI Desktop",
+        setupAction: "Install / Repair MAUI",
+        facts: ["Runs MAUI Windows desktop", "Consumes the shared API", "Default host still works without MAUI"]
       },
       {
         name: "Electron Host",
@@ -495,7 +498,7 @@ function implementationCard(implementation) {
     const button = document.createElement("button");
     button.className = "implementation-link stop";
     button.type = "button";
-    button.textContent = implementation.command === "launchDotnetDesktopHost" ? "Stop .NET Desktop" : "Stop Desktop";
+    button.textContent = stopLabelFor(implementation.command);
     button.addEventListener("click", () => closeHost(implementation.stopCommand));
     article.append(button);
   }
@@ -503,7 +506,7 @@ function implementationCard(implementation) {
     const button = document.createElement("button");
     button.className = "implementation-link";
     button.type = "button";
-    button.textContent = implementation.action ?? "Setup";
+    button.textContent = implementation.setupAction ?? "Setup";
     button.addEventListener("click", () => setupHost(implementation.setupCommand));
     article.append(button);
   }
@@ -573,10 +576,23 @@ function hostLabel(host) {
   if (host === "dotnet-desktop") {
     return ".NET desktop";
   }
+  if (host === "maui-desktop") {
+    return ".NET MAUI desktop";
+  }
   if (host === "maui") {
     return ".NET MAUI";
   }
   return "Desktop";
+}
+
+function stopLabelFor(command) {
+  if (command === "launchDotnetDesktopHost") {
+    return "Stop .NET Desktop";
+  }
+  if (command === "launchMauiHost") {
+    return "Stop MAUI Desktop";
+  }
+  return "Stop Desktop";
 }
 
 function showMauiInstallMessage() {

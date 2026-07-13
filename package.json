@@ -10,6 +10,7 @@
     "start:backend:python": "python apps/backends/python/app.py",
     "start:host:electron": "npm --prefix apps/hosts/electron start",
     "start:host:dotnet-desktop": "dotnet run --project apps/hosts/dotnet-desktop/DzoneDotnetDesktopHost.csproj --no-launch-profile",
+    "start:host:maui": "dotnet run --project apps/hosts/maui/DzoneMauiHost/DzoneMauiHost.csproj -f net10.0-windows10.0.19041.0 --no-launch-profile",
     "check:host:maui": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-maui-workload.ps1 -CheckOnly",
     "setup:host:maui": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-maui-workload.ps1",
     "test": "node --test tests/*.test.js",

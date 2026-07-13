@@ -2,7 +2,8 @@
 
 Optional MAUI desktop host for the shared platform contract.
 
-The repository works by default without MAUI through `apps/hosts/dotnet-desktop`. Use this folder when you want a real MAUI implementation.
+The repository works by default without MAUI through `apps/hosts/dotnet-desktop`.
+This folder contains the optional MAUI Windows desktop host.
 
 Install the MAUI workload before creating or running this host:
 
@@ -32,8 +33,11 @@ or restore workloads from a future MAUI project:
 dotnet workload restore
 ```
 
-Suggested project command once the workload is installed:
+Run the MAUI Windows desktop host:
 
 ```bash
-dotnet new maui -n DzoneMauiHost
+npm run start:host:maui
 ```
+
+By default it talks to `http://localhost:3000`. Set `DZONE_BACKEND_URL` to point
+it at another compatible backend.

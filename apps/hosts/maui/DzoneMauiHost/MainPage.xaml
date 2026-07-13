@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="DzoneMauiHost.MainPage"
+             BackgroundColor="#F3F6F8">
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="16">
+            <Border BackgroundColor="#FFFFFF" Padding="18">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="8" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="DZONE MAUI Host"
+                           FontSize="28"
+                           FontAttributes="Bold"
+                           TextColor="#182128" />
+                    <Label Text="Optional .NET MAUI desktop host using the shared platform contract."
+                           FontSize="15"
+                           TextColor="#5E6B78" />
+                    <Label x:Name="BackendUrlLabel"
+                           FontSize="13"
+                           TextColor="#245A8D" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Grid ColumnDefinitions="*,*,*"
+                  ColumnSpacing="12">
+                <Border Grid.Column="0" BackgroundColor="#FFFFFF" Padding="16">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="8" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout>
+                        <Label Text="Workspaces" TextColor="#5E6B78" />
+                        <Label x:Name="WorkspaceCountLabel" Text="-" FontSize="26" FontAttributes="Bold" TextColor="#182128" />
+                    </VerticalStackLayout>
+                </Border>
+                <Border Grid.Column="1" BackgroundColor="#FFFFFF" Padding="16">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="8" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout>
+                        <Label Text="Documents" TextColor="#5E6B78" />
+                        <Label x:Name="DocumentCountLabel" Text="-" FontSize="26" FontAttributes="Bold" TextColor="#182128" />
+                    </VerticalStackLayout>
+                </Border>
+                <Border Grid.Column="2" BackgroundColor="#FFFFFF" Padding="16">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="8" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout>
+                        <Label Text="Jobs" TextColor="#5E6B78" />
+                        <Label x:Name="JobCountLabel" Text="-" FontSize="26" FontAttributes="Bold" TextColor="#182128" />
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+
+            <Border BackgroundColor="#FFFFFF" Padding="18">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="8" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="12">
+                    <HorizontalStackLayout Spacing="10">
+                        <Button Text="Refresh" Clicked="OnRefreshClicked" />
+                        <Label x:Name="RuntimeStatusLabel"
+                               VerticalOptions="Center"
+                               TextColor="#17633B"
+                               FontAttributes="Bold" />
+                    </HorizontalStackLayout>
+                    <Label x:Name="DetailLabel"
+                           FontSize="13"
+                           LineBreakMode="WordWrap"
+                           TextColor="#5E6B78" />
+                    <Label x:Name="DataLabel"
+                           FontSize="13"
+                           LineBreakMode="WordWrap"
+                           TextColor="#182128" />
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

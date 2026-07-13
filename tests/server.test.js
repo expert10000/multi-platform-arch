@@ -7,6 +7,7 @@ import {
   createElectronHostController,
   createElectronHostLauncher,
   createDotnetDesktopHostController,
+  createMauiHostController,
   createMauiSetupRunner,
   createServer
 } from "../apps/backends/node/src/server.js";
@@ -204,6 +205,38 @@ test("runs optional MAUI setup through the backend", async () => {
   }
 });
 
+test("launches the .NET MAUI host through a local runtime command", async () => {
+  const launches = [];
+  const closes = [];
+  const { server, baseUrl } = await startServer({
+    launchMauiHost: async (input) => {
+      launches.push(input);
+      return { host: "maui-desktop", status: "starting", backendUrl: input.backendUrl };
+    },
+    closeMauiHost: async (input) => {
+      closes.push(input);
+      return { host: "maui-desktop", status: "stopping", backendUrl: input.backendUrl };
+    }
+  });
+  const api = createPlatformApi({ baseUrl });
+
+  try {
+    const result = await api.launchMauiHost();
+    const close = await api.closeMauiHost();
+
+    assert.equal(result.host, "maui-desktop");
+    assert.equal(result.status, "starting");
+    assert.equal(result.backendUrl, baseUrl);
+    assert.equal(close.host, "maui-desktop");
+    assert.equal(close.status, "stopping");
+    assert.equal(close.backendUrl, baseUrl);
+    assert.deepEqual(launches, [{ backendUrl: baseUrl }]);
+    assert.deepEqual(closes, [{ backendUrl: baseUrl }]);
+  } finally {
+    server.close();
+  }
+});
+
 test("electron launcher starts the desktop executable without a shell", async () => {
   const hostRoot = process.platform === "win32" ? "C:\\host" : "/tmp/host";
   const launches = [];
@@ -343,6 +376,47 @@ test("dotnet desktop controller starts and stops the desktop host", async () => 
   assert.deepEqual(launches[0].args, ["run", "--project", "DzoneDotnetDesktopHost.csproj", "--no-launch-profile"]);
   assert.equal(launches[0].options.windowsHide, true);
   assert.deepEqual(stops, [456]);
+});
+
+test("MAUI host controller starts and stops the desktop host", async () => {
+  const launches = [];
+  const stops = [];
+  const controller = createMauiHostController({
+    hostRoot: process.platform === "win32" ? "C:\\host" : "/tmp/host",
+    spawnProcess: (file, args, options) => {
+      launches.push({ file, args, options });
+      return {
+        exitCode: null,
+        signalCode: null,
+        pid: 654,
+        once() {
+          return undefined;
+        },
+        unref() {
+          return undefined;
+        }
+      };
+    },
+    isProcessRunning: (childProcess) => Boolean(childProcess),
+    stopProcess: (childProcess) => {
+      stops.push(childProcess.pid);
+    }
+  });
+
+  const launch = await controller.launchMauiHost({ backendUrl: "http://localhost:3000" });
+  const secondLaunch = await controller.launchMauiHost({ backendUrl: "http://localhost:3000" });
+  const close = await controller.closeMauiHost({ backendUrl: "http://localhost:3000" });
+  const secondClose = await controller.closeMauiHost({ backendUrl: "http://localhost:3000" });
+
+  assert.equal(launch.status, "starting");
+  assert.equal(secondLaunch.status, "running");
+  assert.equal(close.status, "stopping");
+  assert.equal(secondClose.status, "stopped");
+  assert.equal(launches[0].file, "dotnet");
+  assert.deepEqual(launches[0].args, ["run", "--project", "DzoneMauiHost.csproj", "-f", "net10.0-windows10.0.19041.0", "--no-launch-profile"]);
+  assert.equal(launches[0].options.windowsHide, true);
+  assert.equal(launches.length, 1);
+  assert.deepEqual(stops, [654]);
 });
 
 test("MAUI setup runner starts the installer once in the background", async () => {

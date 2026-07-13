@@ -44,7 +44,11 @@ test("central admin exposes hosts backends and workers panels", async () => {
   assert.match(appSource, /closeDotnetDesktopHost/);
   assert.match(appSource, /\.NET MAUI Desktop/);
   assert.match(appSource, /dotnet workload install maui/);
-  assert.match(appSource, /Install MAUI/);
+  assert.match(appSource, /Launch MAUI Desktop/);
+  assert.match(appSource, /Install \/ Repair MAUI/);
+  assert.match(appSource, /Stop MAUI Desktop/);
+  assert.match(appSource, /launchMauiHost/);
+  assert.match(appSource, /closeMauiHost/);
   assert.match(appSource, /Setup Status/);
   assert.match(appSource, /setupMauiHost/);
   assert.match(appSource, /getMauiSetupStatus/);
@@ -63,6 +67,9 @@ test(".NET Desktop host exposes workspace document and job surfaces", async () =
   const windowSource = await readFile(new URL("../apps/hosts/dotnet-desktop/MainWindow.xaml", import.meta.url), "utf8");
   const codeSource = await readFile(new URL("../apps/hosts/dotnet-desktop/MainWindow.xaml.cs", import.meta.url), "utf8");
   const mauiReadme = await readFile(new URL("../apps/hosts/maui/README.md", import.meta.url), "utf8");
+  const mauiProject = await readFile(new URL("../apps/hosts/maui/DzoneMauiHost/DzoneMauiHost.csproj", import.meta.url), "utf8");
+  const mauiPage = await readFile(new URL("../apps/hosts/maui/DzoneMauiHost/MainPage.xaml", import.meta.url), "utf8");
+  const mauiCode = await readFile(new URL("../apps/hosts/maui/DzoneMauiHost/MainPage.xaml.cs", import.meta.url), "utf8");
   const packageSource = await readFile(new URL("../package.json", import.meta.url), "utf8");
   const mauiInstaller = await readFile(new URL("../scripts/install-maui-workload.ps1", import.meta.url), "utf8");
 
@@ -77,6 +84,14 @@ test(".NET Desktop host exposes workspace document and job surfaces", async () =
   assert.match(codeSource, /\/jobs/);
   assert.match(mauiReadme, /dotnet workload install maui/);
   assert.match(mauiReadme, /npm run setup:host:maui/);
+  assert.match(mauiProject, /UseMaui/);
+  assert.match(mauiProject, /DZONE MAUI Host/);
+  assert.match(mauiPage, /DZONE MAUI Host/);
+  assert.match(mauiCode, /DZONE_BACKEND_URL/);
+  assert.match(mauiCode, /\/workspaces/);
+  assert.match(mauiCode, /\/documents/);
+  assert.match(mauiCode, /\/jobs/);
+  assert.match(packageSource, /start:host:maui/);
   assert.match(packageSource, /setup:host:maui/);
   assert.match(packageSource, /check:host:maui/);
   assert.match(mauiInstaller, /dotnet workload install maui/);

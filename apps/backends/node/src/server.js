@@ -11,6 +11,7 @@ const webPublicRoot = fileURLToPath(new URL("../../../hosts/web/public", import.
 const sharedPublicRoot = fileURLToPath(new URL("../../../hosts/shared/public", import.meta.url));
 const electronHostRoot = fileURLToPath(new URL("../../../hosts/electron/", import.meta.url));
 const dotnetDesktopHostRoot = fileURLToPath(new URL("../../../hosts/dotnet-desktop/", import.meta.url));
+const mauiHostRoot = fileURLToPath(new URL("../../../hosts/maui/DzoneMauiHost/", import.meta.url));
 const repoRoot = fileURLToPath(new URL("../../../../", import.meta.url));
 const mauiInstallScript = fileURLToPath(new URL("../../../../scripts/install-maui-workload.ps1", import.meta.url));
 const defaultMauiSetupLog = fileURLToPath(new URL("../../../../data/runtime/maui-setup.log", import.meta.url));
@@ -26,6 +27,8 @@ export function createServer(
     closeElectronHost,
     launchDotnetDesktopHost,
     closeDotnetDesktopHost,
+    launchMauiHost,
+    closeMauiHost,
     setupMauiHost,
     getMauiSetupStatus
   } = options;
@@ -43,6 +46,13 @@ export function createServer(
           closeDotnetDesktopHost: closeDotnetDesktopHost ?? defaultCloseDotnetDesktopHost
         }
       : createDotnetDesktopHostController();
+  const mauiHostController =
+    launchMauiHost || closeMauiHost
+      ? {
+          launchMauiHost,
+          closeMauiHost: closeMauiHost ?? defaultCloseMauiHost
+        }
+      : createMauiHostController();
   const defaultMauiSetupRunner = createMauiSetupRunner();
   const mauiSetup = setupMauiHost ?? defaultMauiSetupRunner;
   const mauiSetupStatus = getMauiSetupStatus ?? defaultMauiSetupRunner.status;
@@ -91,6 +101,14 @@ export function createServer(
 
       if (method === "GET" && path === "/runtime/hosts/maui/setup") {
         return sendJson(response, 200, await mauiSetupStatus());
+      }
+
+      if (method === "POST" && path === "/runtime/hosts/maui/open") {
+        return sendJson(response, 202, await mauiHostController.launchMauiHost({ backendUrl: requestBaseUrl(request) }));
+      }
+
+      if (method === "POST" && path === "/runtime/hosts/maui/close") {
+        return sendJson(response, 202, await mauiHostController.closeMauiHost({ backendUrl: requestBaseUrl(request) }));
       }
 
       if (method === "GET" && path === "/workspaces") {
@@ -276,6 +294,46 @@ export function createDotnetDesktopHostController({
   };
 }
 
+export function createMauiHostController({
+  hostRoot = mauiHostRoot,
+  spawnProcess = spawn,
+  isProcessRunning = isChildProcessRunning,
+  stopProcess = stopChildProcess
+} = {}) {
+  let hostProcess = null;
+
+  return {
+    async launchMauiHost({ backendUrl }) {
+      const command = mauiLaunchCommand();
+
+      if (isProcessRunning(hostProcess)) {
+        return { host: "maui-desktop", status: "running", backendUrl };
+      }
+      hostProcess = null;
+
+      hostProcess = spawnRuntimeHost(command, hostRoot, backendUrl, spawnProcess);
+      hostProcess.once?.("exit", () => {
+        hostProcess = null;
+      });
+      hostProcess.unref();
+
+      return { host: "maui-desktop", status: "starting", backendUrl };
+    },
+
+    async closeMauiHost({ backendUrl }) {
+      if (!isProcessRunning(hostProcess)) {
+        hostProcess = null;
+        return { host: "maui-desktop", status: "stopped", backendUrl };
+      }
+
+      const processToStop = hostProcess;
+      hostProcess = null;
+      stopProcess(processToStop, spawnProcess);
+      return { host: "maui-desktop", status: "stopping", backendUrl };
+    }
+  };
+}
+
 export function createMauiSetupRunner({
   scriptPath = mauiInstallScript,
   workingDirectory = repoRoot,
@@ -417,6 +475,14 @@ function dotnetDesktopLaunchCommand(hostRoot, fileExists) {
   };
 }
 
+function mauiLaunchCommand() {
+  return {
+    file: "dotnet",
+    args: ["run", "--project", "DzoneMauiHost.csproj", "-f", "net10.0-windows10.0.19041.0", "--no-launch-profile"],
+    windowsHide: true
+  };
+}
+
 function mauiSetupExecutable() {
   return process.platform === "win32" ? "powershell.exe" : "pwsh";
 }
@@ -486,6 +552,10 @@ async function defaultCloseElectronHost({ backendUrl }) {
 
 async function defaultCloseDotnetDesktopHost({ backendUrl }) {
   return { host: "dotnet-desktop", status: "stopped", backendUrl };
+}
+
+async function defaultCloseMauiHost({ backendUrl }) {
+  return { host: "maui-desktop", status: "stopped", backendUrl };
 }
 
 function isStaticRequest(path) {

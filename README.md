@@ -110,6 +110,12 @@ Check the optional workload without installing:
 npm run check:host:maui
 ```
 
+Run the optional MAUI desktop host after the workload is installed:
+
+```bash
+npm run start:host:maui
+```
+
 Example:
 
 ```bash

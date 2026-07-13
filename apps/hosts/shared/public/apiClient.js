@@ -16,6 +16,8 @@ export const apiOperations = Object.freeze({
   closeElectronHost: "POST /runtime/hosts/electron/close",
   launchDotnetDesktopHost: "POST /runtime/hosts/dotnet-desktop/open",
   closeDotnetDesktopHost: "POST /runtime/hosts/dotnet-desktop/close",
+  launchMauiHost: "POST /runtime/hosts/maui/open",
+  closeMauiHost: "POST /runtime/hosts/maui/close",
   setupMauiHost: "POST /runtime/hosts/maui/setup",
   getMauiSetupStatus: "GET /runtime/hosts/maui/setup"
 });
@@ -111,6 +113,18 @@ export function createPlatformApi({ baseUrl = "" } = {}) {
 
     closeDotnetDesktopHost() {
       return request(baseUrl, "/runtime/hosts/dotnet-desktop/close", {
+        method: "POST"
+      });
+    },
+
+    launchMauiHost() {
+      return request(baseUrl, "/runtime/hosts/maui/open", {
+        method: "POST"
+      });
+    },
+
+    closeMauiHost() {
+      return request(baseUrl, "/runtime/hosts/maui/close", {
         method: "POST"
       });
     },

@@ -56,6 +56,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RuntimeHostLaunchResult"
+  /runtime/hosts/maui/open:
+    post:
+      operationId: launchMauiHost
+      responses:
+        "202":
+          description: .NET MAUI desktop host launch requested.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeHostLaunchResult"
+  /runtime/hosts/maui/close:
+    post:
+      operationId: closeMauiHost
+      responses:
+        "202":
+          description: .NET MAUI desktop host close requested.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeHostLaunchResult"
   /runtime/hosts/maui/setup:
     get:
       operationId: getMauiSetupStatus
@@ -421,7 +441,7 @@ components:
       properties:
         host:
           type: string
-          enum: [electron, dotnet-desktop]
+          enum: [electron, dotnet-desktop, maui-desktop]
         status:
           type: string
           enum: [starting, running, stopping, stopped]
