@@ -10,6 +10,18 @@ Install the MAUI workload before creating or running this host:
 dotnet workload install maui
 ```
 
+Or use the repository helper:
+
+```bash
+npm run setup:host:maui
+```
+
+Check whether the workload is already installed:
+
+```bash
+npm run check:host:maui
+```
+
 or restore workloads from a future MAUI project:
 
 ```bash

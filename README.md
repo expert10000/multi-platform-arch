@@ -27,6 +27,8 @@ apps/
   hosts/admin/public/          Central admin console
   hosts/web/public/            Separate web workspace host
   hosts/electron/              Desktop host scaffold
+  hosts/dotnet-desktop/        Lightweight .NET desktop host
+  hosts/maui/                  Optional .NET MAUI desktop host notes
   hosts/shared/public/         Contract-named browser API client
 tests/
   platform.test.js             Service-level verification
@@ -74,6 +76,12 @@ point their API client at either backend URL.
 
 ## Hosts
 
+Run the default lightweight .NET desktop host:
+
+```bash
+npm run start:host:dotnet-desktop
+```
+
 Run the Electron desktop host after installing its local dependencies:
 
 ```bash
@@ -84,6 +92,19 @@ npm start
 
 By default the Electron host talks to `http://localhost:3000`. Set
 `DZONE_BACKEND_URL` to point it at another compatible backend.
+
+The optional .NET MAUI host is not required for a default clone. Install it only
+when you want to build the MAUI desktop/mobile path:
+
+```bash
+npm run setup:host:maui
+```
+
+Check the optional workload without installing:
+
+```bash
+npm run check:host:maui
+```
 
 Example:
 

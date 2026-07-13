@@ -57,6 +57,8 @@ test(".NET Desktop host exposes workspace document and job surfaces", async () =
   const windowSource = await readFile(new URL("../apps/hosts/dotnet-desktop/MainWindow.xaml", import.meta.url), "utf8");
   const codeSource = await readFile(new URL("../apps/hosts/dotnet-desktop/MainWindow.xaml.cs", import.meta.url), "utf8");
   const mauiReadme = await readFile(new URL("../apps/hosts/maui/README.md", import.meta.url), "utf8");
+  const packageSource = await readFile(new URL("../package.json", import.meta.url), "utf8");
+  const mauiInstaller = await readFile(new URL("../scripts/install-maui-workload.ps1", import.meta.url), "utf8");
 
   assert.match(projectSource, /UseWPF/);
   assert.match(windowSource, /DZONE \.NET Desktop Host/);
@@ -68,6 +70,11 @@ test(".NET Desktop host exposes workspace document and job surfaces", async () =
   assert.match(codeSource, /\/documents/);
   assert.match(codeSource, /\/jobs/);
   assert.match(mauiReadme, /dotnet workload install maui/);
+  assert.match(mauiReadme, /npm run setup:host:maui/);
+  assert.match(packageSource, /setup:host:maui/);
+  assert.match(packageSource, /check:host:maui/);
+  assert.match(mauiInstaller, /dotnet workload install maui/);
+  assert.match(mauiInstaller, /CheckOnly/);
 });
 
 test("distinct web host exposes workspace document and job surfaces", async () => {
