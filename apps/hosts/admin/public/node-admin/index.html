@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DZONE Node Admin</title>
+    <link rel="stylesheet" href="/admin/styles.css">
+  </head>
+  <body data-runtime-admin="node" data-runtime-name="Node Backend" data-backend-url="http://localhost:3000">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">DZONE Runtime Admin</p>
+        <h1>Node Admin</h1>
+      </div>
+      <a class="implementation-link" href="/">Central Admin</a>
+    </header>
+    <main class="runtime-admin-shell">
+      <section class="panel runtime-admin-hero">
+        <div>
+          <p class="eyebrow">Runtime Status</p>
+          <h2 id="runtimeTitle">Node Backend</h2>
+        </div>
+        <span class="runtime-badge" id="runtimeBadge">Checking</span>
+      </section>
+      <section class="runtime-admin-grid" id="runtimeAdminGrid"></section>
+    </main>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="/admin/runtime-admin.js"></script>
+  </body>
+</html>

@@ -207,6 +207,27 @@ test("runs optional MAUI setup through the backend", async () => {
   }
 });
 
+test("serves dedicated runtime admin hosts", async () => {
+  const { server, baseUrl } = await startServer();
+  try {
+    const nodeAdmin = await fetch(`${baseUrl}/node-admin/`);
+    const springAdmin = await fetch(`${baseUrl}/spring-admin/`);
+    const pythonAdmin = await fetch(`${baseUrl}/python-admin/`);
+    const runtimeScript = await fetch(`${baseUrl}/admin/runtime-admin.js`);
+
+    assert.equal(nodeAdmin.status, 200);
+    assert.match(await nodeAdmin.text(), /Node Admin/);
+    assert.equal(springAdmin.status, 200);
+    assert.match(await springAdmin.text(), /Spring Admin/);
+    assert.equal(pythonAdmin.status, 200);
+    assert.match(await pythonAdmin.text(), /Python Admin/);
+    assert.equal(runtimeScript.status, 200);
+    assert.match(await runtimeScript.text(), /runtimeCatalog/);
+  } finally {
+    server.close();
+  }
+});
+
 test("reports and runs Spring backend setup through the backend", async () => {
   const setups = [];
   const { server, baseUrl } = await startServer({

@@ -23,6 +23,10 @@ test("spring backend supports the shared contract flow", { skip: !hasMaven }, as
     assert.equal(admin.status, 200);
     assert.match(await admin.text(), /Central Admin Console/);
 
+    const springAdmin = await fetch(`${backend.baseUrl}/spring-admin/`);
+    assert.equal(springAdmin.status, 200);
+    assert.match(await springAdmin.text(), /Spring Admin/);
+
     const workspace = await api.createWorkspace({ name: "Spring Workspace" });
     const document = await api.createDocument({
       workspaceId: workspace.id,

@@ -417,6 +417,11 @@ button:focus-visible {
   color: var(--danger);
 }
 
+.runtime-badge.stopped {
+  background: #fff1f1;
+  color: var(--danger);
+}
+
 .runtime-badge.installing {
   background: #fff5df;
   color: #8a5b00;
@@ -716,10 +721,66 @@ td {
   opacity: 1;
 }
 
+.runtime-admin-shell {
+  display: grid;
+  gap: 18px;
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding: 18px;
+}
+
+.runtime-admin-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px;
+}
+
+.runtime-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.runtime-admin-card {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 170px;
+  padding: 14px;
+}
+
+.runtime-admin-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding: 6px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.runtime-admin-row strong {
+  color: var(--ink);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.runtime-admin-chip {
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: #f6f8f9;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 750;
+}
+
 @media (max-width: 920px) {
   .shell,
   .content-grid,
-  .implementation-grid {
+  .implementation-grid,
+  .runtime-admin-grid {
     grid-template-columns: 1fr;
   }
 

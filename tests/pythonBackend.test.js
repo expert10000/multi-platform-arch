@@ -15,6 +15,10 @@ test("python backend supports the shared contract flow", async () => {
     const health = await api.getHealth();
     assert.equal(health.runtime, "python");
 
+    const pythonAdmin = await fetch(`${backend.baseUrl}/python-admin/`);
+    assert.equal(pythonAdmin.status, 200);
+    assert.match(await pythonAdmin.text(), /Python Admin/);
+
     const workspace = await api.createWorkspace({ name: "Python Workspace" });
     const fetchedWorkspace = await api.getWorkspace(workspace.id);
     const document = await api.createDocument({

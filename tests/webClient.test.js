@@ -36,6 +36,7 @@ test("central admin exposes hosts backends and workers panels", async () => {
 
   assert.match(html, /Central Admin Console/);
   assert.match(appSource, /Node Backend/);
+  assert.match(appSource, /Open Node Admin/);
   assert.match(appSource, /Spring Boot Backend/);
   assert.match(appSource, /Start Spring Admin/);
   assert.match(appSource, /Open Spring Admin/);
@@ -47,6 +48,18 @@ test("central admin exposes hosts backends and workers panels", async () => {
   assert.match(appSource, /getSpringSetupStatus/);
   assert.match(appSource, /Show installer log/);
   assert.match(appSource, /Python Backend/);
+  assert.match(appSource, /Open Python Admin/);
+  assert.match(appSource, /nodeBackendStatus/);
+  assert.match(appSource, /pythonBackendStatus/);
+  assert.match(appSource, /loadRuntimeHealth/);
+  const runtimeAdmin = await readFile(new URL("../apps/hosts/admin/public/runtime-admin.js", import.meta.url), "utf8");
+  const nodeAdmin = await readFile(new URL("../apps/hosts/admin/public/node-admin/index.html", import.meta.url), "utf8");
+  const springAdmin = await readFile(new URL("../apps/hosts/admin/public/spring-admin/index.html", import.meta.url), "utf8");
+  const pythonAdmin = await readFile(new URL("../apps/hosts/admin/public/python-admin/index.html", import.meta.url), "utf8");
+  assert.match(runtimeAdmin, /runtimeCatalog/);
+  assert.match(nodeAdmin, /Node Backend/);
+  assert.match(springAdmin, /Spring Boot Backend/);
+  assert.match(pythonAdmin, /Python Backend/);
   assert.match(appSource, /\.NET Desktop Host/);
   assert.match(appSource, /Launch \.NET Desktop/);
   assert.match(appSource, /Stop \.NET Desktop/);

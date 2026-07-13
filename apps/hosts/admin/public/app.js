@@ -1,4 +1,4 @@
-import { platformApi } from "/shared/apiClient.js";
+import { createPlatformApi, platformApi } from "/shared/apiClient.js";
 
 const state = {
   workspaces: [],
@@ -6,6 +6,8 @@ const state = {
   jobs: [],
   mauiSetup: null,
   springSetup: null,
+  nodeHealth: null,
+  pythonHealth: null,
   runtimeName: "unknown",
   activeWorkspaceId: null,
   activeArchitectureSection: "models",
@@ -44,6 +46,9 @@ const architectureSections = {
     items: ["Extract text", "Generate thumbnails", "Summarize", "Index search"]
   }
 };
+
+const nodeApi = createPlatformApi({ baseUrl: "http://localhost:3000" });
+const pythonApi = createPlatformApi({ baseUrl: "http://localhost:3100" });
 
 const elements = {
   runtimeStatus: document.querySelector("#runtimeStatus"),
@@ -116,6 +121,7 @@ window.setInterval(() => {
     if (isSpringSetupActive()) {
       await loadSpringSetupStatus();
     }
+    await loadRuntimeHealth();
     if (state.activeWorkspaceId) {
       await refreshActiveWorkspace();
     }
@@ -125,6 +131,7 @@ window.setInterval(() => {
 
 async function initialize() {
   await loadHealth();
+  await loadRuntimeHealth();
   await loadMauiSetupStatus();
   await loadSpringSetupStatus();
   await loadWorkspaces();
@@ -157,6 +164,15 @@ async function loadMauiSetupStatus() {
 
 async function loadSpringSetupStatus() {
   state.springSetup = await platformApi.getSpringSetupStatus().catch(() => null);
+}
+
+async function loadRuntimeHealth() {
+  const [nodeHealth, pythonHealth] = await Promise.all([
+    nodeApi.getHealth().catch(() => null),
+    pythonApi.getHealth().catch(() => null)
+  ]);
+  state.nodeHealth = nodeHealth;
+  state.pythonHealth = pythonHealth;
 }
 
 async function refreshActiveWorkspace() {
@@ -410,8 +426,10 @@ function implementationSections(metrics) {
     backends: [
       {
         name: "Node Backend",
-        status: state.runtimeName === "node" ? "Running" : "Available",
+        status: nodeBackendStatus(),
         summary: "Default local backend for the dashboard, SQLite metadata, local file storage, worker startup, and desktop launcher control.",
+        href: "/node-admin/",
+        hrefAction: "Open Node Admin",
         facts: [
           `${metrics.uploadedFiles} files ingested`,
           `${metrics.completedJobs} completed jobs`,
@@ -437,9 +455,11 @@ function implementationSections(metrics) {
       },
       {
         name: "Python Backend",
-        status: state.runtimeName === "python" ? "Running" : "Available",
+        status: pythonBackendStatus(),
         summary: "Interchangeable backend using the same contract with in-memory metadata and local file bytes.",
-        facts: ["Implements workspaces", "Implements documents and uploads", "Implements jobs"]
+        href: "/python-admin/",
+        hrefAction: "Open Python Admin",
+        facts: ["Implements workspaces", "Implements documents and uploads", `Runtime: ${state.pythonHealth?.runtime ?? "stopped"}`]
       },
       {
         name: "Future Backends",
@@ -794,7 +814,7 @@ function springPrerequisitesInstalled() {
 
 function springAdminHref() {
   return state.springSetup?.spring === "running" || state.runtimeName === "spring-boot"
-    ? "http://localhost:3200/"
+    ? "http://localhost:3200/spring-admin/"
     : null;
 }
 
@@ -808,6 +828,18 @@ function springBackendFacts() {
     `Spring: ${spring}`,
     spring === "running" ? "Admin: http://localhost:3200" : "Admin: stopped"
   ];
+}
+
+function nodeBackendStatus() {
+  return state.nodeHealth?.runtime === "node" || state.runtimeName === "node"
+    ? "Running"
+    : "Stopped";
+}
+
+function pythonBackendStatus() {
+  return state.pythonHealth?.runtime === "python" || state.runtimeName === "python"
+    ? "Running"
+    : "Stopped";
 }
 
 function adminMetrics() {

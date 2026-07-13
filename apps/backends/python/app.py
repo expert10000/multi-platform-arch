@@ -15,6 +15,10 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 DOCUMENT_STATUSES = {"draft", "review", "approved", "archived"}
 JOB_TYPES = {"extract-text", "thumbnail", "summarize", "index-search"}
+REPO_ROOT = Path(__file__).resolve().parents[3]
+ADMIN_ROOT = REPO_ROOT / "apps" / "hosts" / "admin" / "public"
+WEB_ROOT = REPO_ROOT / "apps" / "hosts" / "web" / "public"
+SHARED_ROOT = REPO_ROOT / "apps" / "hosts" / "shared" / "public"
 
 
 class ApiError(Exception):
@@ -198,6 +202,9 @@ class RequestHandler(BaseHTTPRequestHandler):
             path = parsed.path
             query = parse_qs(parsed.query)
 
+            if method == "GET" and self.try_send_static(path):
+                return
+
             if method == "GET" and path == "/health":
                 return self.send_json(200, {"ok": True, "runtime": "python"})
 
@@ -291,6 +298,24 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.send_header("access-control-allow-methods", "GET, POST, PUT, DELETE, OPTIONS")
         self.send_header("access-control-allow-headers", "content-type, x-file-name")
 
+    def try_send_static(self, path: str) -> bool:
+        target = static_target_for(path)
+        if not target:
+            return False
+        root, relative_path = target
+        file_path = (root / relative_path).resolve()
+        if not str(file_path).startswith(str(root.resolve())) or not file_path.exists() or file_path.is_dir():
+            return False
+        content = file_path.read_bytes()
+        self.send_response(200)
+        self.send_header("content-type", content_type_for(file_path))
+        self.send_header("content-length", str(len(content)))
+        self.send_header("cache-control", "no-store")
+        self.send_cors_headers()
+        self.end_headers()
+        self.wfile.write(content)
+        return True
+
     def log_message(self, format: str, *args) -> None:
         return
 
@@ -356,6 +381,44 @@ def safe_segment(value: str) -> str:
 def safe_file_name(value: str) -> str:
     sanitized = re.sub(r'[<>:"/\\|?*\x00-\x1F]', "_", value).strip()
     return sanitized or "upload.bin"
+
+
+def static_target_for(path: str) -> tuple[Path, str] | None:
+    if path in {"/", "/admin", "/admin/"}:
+        return ADMIN_ROOT, "index.html"
+    if path in {"/web", "/web/"}:
+        return WEB_ROOT, "index.html"
+    for route, root in {
+        "/admin/": ADMIN_ROOT,
+        "/web/": WEB_ROOT,
+        "/shared/": SHARED_ROOT,
+        "/node-admin/": ADMIN_ROOT / "node-admin",
+        "/spring-admin/": ADMIN_ROOT / "spring-admin",
+        "/python-admin/": ADMIN_ROOT / "python-admin",
+    }.items():
+        if path.startswith(route):
+            relative = path.removeprefix(route) or "index.html"
+            return root, relative
+    if path in {"/node-admin", "/node-admin/"}:
+        return ADMIN_ROOT / "node-admin", "index.html"
+    if path in {"/spring-admin", "/spring-admin/"}:
+        return ADMIN_ROOT / "spring-admin", "index.html"
+    if path in {"/python-admin", "/python-admin/"}:
+        return ADMIN_ROOT / "python-admin", "index.html"
+    return None
+
+
+def content_type_for(file_path: Path) -> str:
+    suffix = file_path.suffix
+    if suffix == ".html":
+        return "text/html; charset=utf-8"
+    if suffix == ".css":
+        return "text/css; charset=utf-8"
+    if suffix == ".js":
+        return "text/javascript; charset=utf-8"
+    if suffix == ".png":
+        return "image/png"
+    return "application/octet-stream"
 
 
 def main() -> None:

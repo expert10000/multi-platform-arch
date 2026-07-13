@@ -809,7 +809,7 @@ async function defaultCloseSpringBackend({ backendUrl }) {
 }
 
 function isStaticRequest(path) {
-  return path === "/" || path === "/admin" || path === "/web" || path.startsWith("/admin/") || path.startsWith("/web/") || path.startsWith("/shared/");
+  return path === "/" || path === "/admin" || path === "/web" || path === "/node-admin" || path === "/spring-admin" || path === "/python-admin" || path.startsWith("/admin/") || path.startsWith("/web/") || path.startsWith("/shared/") || path.startsWith("/node-admin/") || path.startsWith("/spring-admin/") || path.startsWith("/python-admin/");
 }
 
 async function tryServeStatic(path, response) {
@@ -849,11 +849,29 @@ function staticTargetFor(path) {
   if (path === "/web" || path === "/web/") {
     return { root: webPublicRoot, relativePath: "index.html" };
   }
+  if (path === "/node-admin" || path === "/node-admin/") {
+    return { root: join(adminPublicRoot, "node-admin"), relativePath: "index.html" };
+  }
+  if (path === "/spring-admin" || path === "/spring-admin/") {
+    return { root: join(adminPublicRoot, "spring-admin"), relativePath: "index.html" };
+  }
+  if (path === "/python-admin" || path === "/python-admin/") {
+    return { root: join(adminPublicRoot, "python-admin"), relativePath: "index.html" };
+  }
   if (path.startsWith("/admin/")) {
     return { root: adminPublicRoot, relativePath: path.slice("/admin/".length) };
   }
   if (path.startsWith("/web/")) {
     return { root: webPublicRoot, relativePath: path.slice("/web/".length) };
+  }
+  if (path.startsWith("/node-admin/")) {
+    return { root: join(adminPublicRoot, "node-admin"), relativePath: path.slice("/node-admin/".length) };
+  }
+  if (path.startsWith("/spring-admin/")) {
+    return { root: join(adminPublicRoot, "spring-admin"), relativePath: path.slice("/spring-admin/".length) };
+  }
+  if (path.startsWith("/python-admin/")) {
+    return { root: join(adminPublicRoot, "python-admin"), relativePath: path.slice("/python-admin/".length) };
   }
   if (path.startsWith("/shared/")) {
     return { root: sharedPublicRoot, relativePath: path.slice("/shared/".length) };
