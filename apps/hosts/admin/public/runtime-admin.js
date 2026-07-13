@@ -35,6 +35,17 @@ const runtimeCatalog = {
     ],
     functions: ["OpenAPI routes", "Spring-served admin/web hosts", "Upload handling", "Job lifecycle", "JVM runtime surface"]
   },
+  aspnet: {
+    expectedRuntime: "aspnet-core",
+    facts: [
+      ["Port", "3300"],
+      ["Storage", "In-memory metadata"],
+      ["Files", "data/aspnet-files"],
+      ["Workers", "Hosted background worker"],
+      ["Tooling", ".NET SDK"]
+    ],
+    functions: ["OpenAPI routes", "ASP.NET-served admin/web hosts", "Upload handling", "Job lifecycle", ".NET runtime surface"]
+  },
   python: {
     expectedRuntime: "python",
     facts: [

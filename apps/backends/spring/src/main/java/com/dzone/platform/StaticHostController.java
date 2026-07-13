@@ -54,6 +54,16 @@ public class StaticHostController {
     return serve(adminRoot.resolve("python-admin"), cleanAssetPath(assetPath));
   }
 
+  @GetMapping({"/aspnet-admin", "/aspnet-admin/"})
+  ResponseEntity<byte[]> aspNetAdminIndex() throws IOException {
+    return serve(adminRoot.resolve("aspnet-admin"), "index.html");
+  }
+
+  @GetMapping("/aspnet-admin/{*assetPath}")
+  ResponseEntity<byte[]> aspNetAdminAsset(@PathVariable String assetPath) throws IOException {
+    return serve(adminRoot.resolve("aspnet-admin"), cleanAssetPath(assetPath));
+  }
+
   @GetMapping("/admin/{*assetPath}")
   ResponseEntity<byte[]> adminAsset(@PathVariable String assetPath) throws IOException {
     return serve(adminRoot, cleanAssetPath(assetPath));

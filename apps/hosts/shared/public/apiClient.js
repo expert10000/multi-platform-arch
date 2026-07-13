@@ -23,7 +23,9 @@ export const apiOperations = Object.freeze({
   setupMauiHost: "POST /runtime/hosts/maui/setup",
   getMauiSetupStatus: "GET /runtime/hosts/maui/setup",
   setupSpringBackend: "POST /runtime/backends/spring/setup",
-  getSpringSetupStatus: "GET /runtime/backends/spring/setup"
+  getSpringSetupStatus: "GET /runtime/backends/spring/setup",
+  launchAspNetCoreBackend: "POST /runtime/backends/aspnet-core/open",
+  closeAspNetCoreBackend: "POST /runtime/backends/aspnet-core/close"
 });
 
 export const platformApi = createPlatformApi();
@@ -163,6 +165,18 @@ export function createPlatformApi({ baseUrl = "" } = {}) {
 
     getSpringSetupStatus() {
       return request(baseUrl, "/runtime/backends/spring/setup");
+    },
+
+    launchAspNetCoreBackend() {
+      return request(baseUrl, "/runtime/backends/aspnet-core/open", {
+        method: "POST"
+      });
+    },
+
+    closeAspNetCoreBackend() {
+      return request(baseUrl, "/runtime/backends/aspnet-core/close", {
+        method: "POST"
+      });
     }
   };
 }

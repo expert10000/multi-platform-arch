@@ -7,6 +7,7 @@ const state = {
   mauiSetup: null,
   springSetup: null,
   nodeHealth: null,
+  aspNetCoreHealth: null,
   pythonHealth: null,
   runtimeName: "unknown",
   activeWorkspaceId: null,
@@ -49,6 +50,7 @@ const architectureSections = {
 };
 
 const nodeApi = createPlatformApi({ baseUrl: "http://localhost:3000" });
+const aspNetCoreApi = createPlatformApi({ baseUrl: "http://localhost:3300" });
 const pythonApi = createPlatformApi({ baseUrl: "http://localhost:3100" });
 
 const elements = {
@@ -179,11 +181,13 @@ async function loadSpringSetupStatus() {
 }
 
 async function loadRuntimeHealth() {
-  const [nodeHealth, pythonHealth] = await Promise.all([
+  const [nodeHealth, aspNetCoreHealth, pythonHealth] = await Promise.all([
     nodeApi.getHealth().catch(() => null),
+    aspNetCoreApi.getHealth().catch(() => null),
     pythonApi.getHealth().catch(() => null)
   ]);
   state.nodeHealth = nodeHealth;
+  state.aspNetCoreHealth = aspNetCoreHealth;
   state.pythonHealth = pythonHealth;
 }
 
@@ -481,6 +485,22 @@ function implementationSections(metrics) {
         facts: springBackendFacts()
       },
       {
+        name: "ASP.NET Core Backend",
+        status: aspNetCoreBackendStatus(),
+        summary: "Microsoft server backend option that implements the same OpenAPI routes and can serve the shared admin/web hosts.",
+        href: aspNetCoreAdminHref(),
+        command: "launchAspNetCoreBackend",
+        stopCommand: "closeAspNetCoreBackend",
+        action: "Start ASP.NET Admin",
+        stopAction: "Stop ASP.NET Core",
+        hrefAction: "Open ASP.NET Admin",
+        facts: [
+          ".NET SDK runtime",
+          "Hosted worker",
+          `Runtime: ${state.aspNetCoreHealth?.runtime ?? "stopped"}`
+        ]
+      },
+      {
         name: "Python Backend",
         status: pythonBackendStatus(),
         summary: "Interchangeable backend using the same contract with in-memory metadata and local file bytes.",
@@ -491,7 +511,7 @@ function implementationSections(metrics) {
       {
         name: "Future Backends",
         status: "Planned",
-        summary: "ASP.NET Core, FastAPI, and Go can implement the same OpenAPI surface without host rewrites.",
+        summary: "FastAPI and Go can implement the same OpenAPI surface without host rewrites.",
         facts: ["Same contracts", "Own persistence choices", "No host rewrite required"]
       }
     ],
@@ -703,6 +723,9 @@ function hostLabel(host) {
   if (host === "spring-backend") {
     return "Spring Boot";
   }
+  if (host === "aspnet-core-backend") {
+    return "ASP.NET Core";
+  }
   return "Desktop";
 }
 
@@ -861,6 +884,18 @@ function nodeBackendStatus() {
   return state.nodeHealth?.runtime === "node" || state.runtimeName === "node"
     ? "Running"
     : "Stopped";
+}
+
+function aspNetCoreBackendStatus() {
+  return state.aspNetCoreHealth?.runtime === "aspnet-core" || state.runtimeName === "aspnet-core"
+    ? "Running"
+    : "Stopped";
+}
+
+function aspNetCoreAdminHref() {
+  return aspNetCoreBackendStatus() === "Running"
+    ? "http://localhost:3300/aspnet-admin/"
+    : null;
 }
 
 function pythonBackendStatus() {

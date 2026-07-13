@@ -96,6 +96,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RuntimeHostLaunchResult"
+  /runtime/backends/aspnet-core/open:
+    post:
+      operationId: launchAspNetCoreBackend
+      responses:
+        "202":
+          description: ASP.NET Core backend launch requested.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeHostLaunchResult"
+  /runtime/backends/aspnet-core/close:
+    post:
+      operationId: closeAspNetCoreBackend
+      responses:
+        "202":
+          description: ASP.NET Core backend close requested.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeHostLaunchResult"
   /runtime/hosts/maui/setup:
     get:
       operationId: getMauiSetupStatus
@@ -480,7 +500,7 @@ components:
       properties:
         host:
           type: string
-          enum: [electron, dotnet-desktop, maui-desktop, spring-backend]
+          enum: [electron, dotnet-desktop, maui-desktop, spring-backend, aspnet-core-backend]
         status:
           type: string
           enum: [starting, running, stopping, stopped]

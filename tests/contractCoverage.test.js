@@ -67,6 +67,14 @@ test("backend covers every OpenAPI operation", async () => {
     coveredOperations.add("closeSpringBackend");
     assert.equal(springClose.host, "spring-backend");
 
+    const aspNetCoreLaunch = await api.launchAspNetCoreBackend();
+    coveredOperations.add("launchAspNetCoreBackend");
+    assert.equal(aspNetCoreLaunch.host, "aspnet-core-backend");
+
+    const aspNetCoreClose = await api.closeAspNetCoreBackend();
+    coveredOperations.add("closeAspNetCoreBackend");
+    assert.equal(aspNetCoreClose.host, "aspnet-core-backend");
+
     const mauiSetup = await api.setupMauiHost();
     coveredOperations.add("setupMauiHost");
     assert.equal(mauiSetup.host, "maui");
@@ -239,6 +247,16 @@ async function startServer(options) {
     }),
     closeSpringBackend: async ({ backendUrl }) => ({
       host: "spring-backend",
+      status: "stopping",
+      backendUrl
+    }),
+    launchAspNetCoreBackend: async ({ backendUrl }) => ({
+      host: "aspnet-core-backend",
+      status: "starting",
+      backendUrl
+    }),
+    closeAspNetCoreBackend: async ({ backendUrl }) => ({
+      host: "aspnet-core-backend",
       status: "stopping",
       backendUrl
     }),

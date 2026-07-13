@@ -9,6 +9,7 @@ import {
   createDotnetDesktopHostController,
   createMauiHostController,
   createMauiSetupRunner,
+  createAspNetCoreBackendController,
   createSpringBackendController,
   createSpringSetupRunner,
   createServer
@@ -213,6 +214,7 @@ test("serves dedicated runtime admin hosts", async () => {
     const nodeAdmin = await fetch(`${baseUrl}/node-admin/`);
     const springAdmin = await fetch(`${baseUrl}/spring-admin/`);
     const pythonAdmin = await fetch(`${baseUrl}/python-admin/`);
+    const aspNetAdmin = await fetch(`${baseUrl}/aspnet-admin/`);
     const runtimeScript = await fetch(`${baseUrl}/admin/runtime-admin.js`);
 
     assert.equal(nodeAdmin.status, 200);
@@ -221,6 +223,8 @@ test("serves dedicated runtime admin hosts", async () => {
     assert.match(await springAdmin.text(), /Spring Admin/);
     assert.equal(pythonAdmin.status, 200);
     assert.match(await pythonAdmin.text(), /Python Admin/);
+    assert.equal(aspNetAdmin.status, 200);
+    assert.match(await aspNetAdmin.text(), /ASP.NET Admin/);
     assert.equal(runtimeScript.status, 200);
     assert.match(await runtimeScript.text(), /runtimeCatalog/);
   } finally {
@@ -558,6 +562,38 @@ test("MAUI setup runner starts the installer once in the background", async () =
   }
 });
 
+test("launches the ASP.NET Core backend through a local runtime command", async () => {
+  const launches = [];
+  const closes = [];
+  const { server, baseUrl } = await startServer({
+    launchAspNetCoreBackend: async (input) => {
+      launches.push(input);
+      return { host: "aspnet-core-backend", status: "starting", backendUrl: input.backendUrl };
+    },
+    closeAspNetCoreBackend: async (input) => {
+      closes.push(input);
+      return { host: "aspnet-core-backend", status: "stopping", backendUrl: input.backendUrl };
+    }
+  });
+  const api = createPlatformApi({ baseUrl });
+
+  try {
+    const result = await api.launchAspNetCoreBackend();
+    const close = await api.closeAspNetCoreBackend();
+
+    assert.equal(result.host, "aspnet-core-backend");
+    assert.equal(result.status, "starting");
+    assert.equal(result.backendUrl, "http://localhost:3300");
+    assert.equal(close.host, "aspnet-core-backend");
+    assert.equal(close.status, "stopping");
+    assert.equal(close.backendUrl, "http://localhost:3300");
+    assert.deepEqual(launches, [{ backendUrl: "http://localhost:3300" }]);
+    assert.deepEqual(closes, [{ backendUrl: "http://localhost:3300" }]);
+  } finally {
+    server.close();
+  }
+});
+
 test("Spring setup runner reports tool state and starts installer once", async () => {
   const setupRoot = await mkdtemp(join(tmpdir(), "dzone-spring-setup-"));
   const launches = [];
@@ -644,6 +680,49 @@ test("Spring backend controller starts and stops Maven runtime", async () => {
   assert.equal(launches[0].options.env.SERVER_PORT, "3200");
   assert.equal(launches[0].options.windowsHide, process.platform === "win32");
   assert.deepEqual(stops, [321]);
+});
+
+test("ASP.NET Core backend controller starts and stops dotnet runtime", async () => {
+  const launches = [];
+  const stops = [];
+  const controller = createAspNetCoreBackendController({
+    workingDirectory: process.platform === "win32" ? "C:\\repo\\apps\\backends\\aspnet-core" : "/tmp/repo/apps/backends/aspnet-core",
+    spawnProcess: (file, args, options) => {
+      launches.push({ file, args, options });
+      return {
+        exitCode: null,
+        signalCode: null,
+        pid: 331,
+        once() {
+          return undefined;
+        },
+        unref() {
+          return undefined;
+        }
+      };
+    },
+    isProcessRunning: (childProcess) => Boolean(childProcess),
+    stopProcess: (childProcess) => {
+      stops.push(childProcess.pid);
+    },
+    checkAspNetCoreRuntime: async () => "stopped"
+  });
+
+  const launch = await controller.launchAspNetCoreBackend({ backendUrl: "http://localhost:3300" });
+  const secondLaunch = await controller.launchAspNetCoreBackend({ backendUrl: "http://localhost:3300" });
+  const close = await controller.closeAspNetCoreBackend({ backendUrl: "http://localhost:3300" });
+  const secondClose = await controller.closeAspNetCoreBackend({ backendUrl: "http://localhost:3300" });
+
+  assert.equal(launch.status, "starting");
+  assert.equal(secondLaunch.status, "running");
+  assert.equal(close.status, "stopping");
+  assert.equal(secondClose.status, "stopped");
+  assert.equal(launches.length, 1);
+  assert.equal(launches[0].file, "dotnet");
+  assert.deepEqual(launches[0].args, ["run", "--project", "DzoneAspNetCoreBackend.csproj", "--urls", "http://127.0.0.1:3300"]);
+  assert.equal(launches[0].options.env.ASPNETCORE_URLS, "http://127.0.0.1:3300");
+  assert.equal(launches[0].options.windowsHide, true);
+  assert.deepEqual(stops, [331]);
 });
 
 async function startServer(options) {

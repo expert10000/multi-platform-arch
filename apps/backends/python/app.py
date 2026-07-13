@@ -395,6 +395,7 @@ def static_target_for(path: str) -> tuple[Path, str] | None:
         "/node-admin/": ADMIN_ROOT / "node-admin",
         "/spring-admin/": ADMIN_ROOT / "spring-admin",
         "/python-admin/": ADMIN_ROOT / "python-admin",
+        "/aspnet-admin/": ADMIN_ROOT / "aspnet-admin",
     }.items():
         if path.startswith(route):
             relative = path.removeprefix(route) or "index.html"
@@ -405,6 +406,8 @@ def static_target_for(path: str) -> tuple[Path, str] | None:
         return ADMIN_ROOT / "spring-admin", "index.html"
     if path in {"/python-admin", "/python-admin/"}:
         return ADMIN_ROOT / "python-admin", "index.html"
+    if path in {"/aspnet-admin", "/aspnet-admin/"}:
+        return ADMIN_ROOT / "aspnet-admin", "index.html"
     return None
 
 
