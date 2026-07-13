@@ -347,7 +347,6 @@ test("dotnet desktop controller starts and stops the desktop host", async () => 
 test("MAUI setup runner starts the installer once in the background", async () => {
   const setupRoot = await mkdtemp(join(tmpdir(), "dzone-maui-setup-"));
   const launches = [];
-  let unrefCalled = false;
   const runner = createMauiSetupRunner({
     scriptPath: join(setupRoot, "install-maui-workload.ps1"),
     workingDirectory: setupRoot,
@@ -360,9 +359,6 @@ test("MAUI setup runner starts the installer once in the background", async () =
         pid: 789,
         once() {
           return undefined;
-        },
-        unref() {
-          unrefCalled = true;
         }
       };
     },
@@ -382,10 +378,10 @@ test("MAUI setup runner starts the installer once in the background", async () =
     assert.deepEqual(launches[0].args.slice(0, 3), ["-NoProfile", "-ExecutionPolicy", "Bypass"]);
     assert.equal(launches[0].args[3], "-File");
     assert.match(launches[0].args[4], /install-maui-workload\.ps1$/);
+    assert.equal(launches[0].options.detached, false);
     assert.equal(launches[0].options.shell, false);
     assert.deepEqual(launches[0].options.stdio, ["ignore", "pipe", "pipe"]);
     assert.equal(launches[0].options.windowsHide, true);
-    assert.equal(unrefCalled, true);
   } finally {
     await rm(setupRoot, { recursive: true, force: true });
   }

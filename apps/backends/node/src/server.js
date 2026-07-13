@@ -317,14 +317,15 @@ export function createMauiSetupRunner({
 
     setupProcess = spawnProcess(mauiSetupExecutable(), mauiSetupArgs(scriptPath), {
       cwd: workingDirectory,
-      detached: true,
+      detached: false,
       shell: false,
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true
     });
+    await appendLog(logPath, `[maui] Setup process started${setupProcess.pid ? ` with pid ${setupProcess.pid}` : ""}\n`);
     captureInstallerOutput(setupProcess.stdout, logPath, (text) => updateLastOutput(text));
     captureInstallerOutput(setupProcess.stderr, logPath, (text) => updateLastOutput(text));
-    setupProcess.once?.("exit", async (exitCode, signal) => {
+    setupProcess.once?.("close", async (exitCode, signal) => {
       const finishedAt = now().toISOString();
       const status = exitCode === 0 ? "completed" : "failed";
       state = {
@@ -337,7 +338,6 @@ export function createMauiSetupRunner({
       await appendLog(logPath, `[maui] Setup ${status} at ${finishedAt} (exit ${exitCode ?? "none"}${signal ? `, signal ${signal}` : ""})\n`);
       setupProcess = null;
     });
-    setupProcess.unref?.();
 
     return setupStatus("starting");
   }
