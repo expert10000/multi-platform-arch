@@ -3,7 +3,10 @@ import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { createServer } from "../apps/backends/node/src/server.js";
+import {
+  createElectronHostLauncher,
+  createServer
+} from "../apps/backends/node/src/server.js";
 import { createPlatformApi } from "../apps/hosts/shared/public/apiClient.js";
 
 test("serves the central admin host from the backend root", async () => {
@@ -123,6 +126,39 @@ test("launches the Electron host through a local runtime command", async () => {
   } finally {
     server.close();
   }
+});
+
+test("electron launcher starts the desktop executable without a shell", async () => {
+  const hostRoot = process.platform === "win32" ? "C:\\host" : "/tmp/host";
+  const launches = [];
+  let unrefCalled = false;
+  const launcher = createElectronHostLauncher({
+    hostRoot,
+    fileExists: (filePath) => filePath.includes("electron"),
+    spawnProcess: (file, args, options) => {
+      launches.push({ file, args, options });
+      return {
+        exitCode: null,
+        signalCode: null,
+        unref() {
+          unrefCalled = true;
+        }
+      };
+    }
+  });
+
+  const firstLaunch = await launcher({ backendUrl: "http://localhost:3000" });
+  const secondLaunch = await launcher({ backendUrl: "http://localhost:3000" });
+
+  assert.equal(firstLaunch.status, "starting");
+  assert.equal(secondLaunch.status, "running");
+  assert.equal(launches.length, 1);
+  assert.match(launches[0].file, /electron(\.exe)?$/);
+  assert.deepEqual(launches[0].args, [hostRoot]);
+  assert.equal(launches[0].options.shell, false);
+  assert.equal(launches[0].options.windowsHide, true);
+  assert.equal(launches[0].options.env.DZONE_BACKEND_URL, "http://localhost:3000");
+  assert.equal(unrefCalled, true);
 });
 
 async function startServer(options) {

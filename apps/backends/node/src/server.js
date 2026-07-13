@@ -1,5 +1,6 @@
 import { createServer as createHttpServer } from "node:http";
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -126,7 +127,11 @@ export function createServer(
   });
 }
 
-export function createElectronHostLauncher({ hostRoot = electronHostRoot } = {}) {
+export function createElectronHostLauncher({
+  hostRoot = electronHostRoot,
+  fileExists = existsSync,
+  spawnProcess = spawn
+} = {}) {
   let hostProcess = null;
 
   return async function launchElectronHost({ backendUrl }) {
@@ -134,11 +139,12 @@ export function createElectronHostLauncher({ hostRoot = electronHostRoot } = {})
       return { host: "electron", status: "running", backendUrl };
     }
 
-    hostProcess = spawn("npm", ["start"], {
+    const command = electronLaunchCommand(hostRoot, fileExists);
+    hostProcess = spawnProcess(command.file, command.args, {
       cwd: hostRoot,
       detached: true,
       env: { ...process.env, DZONE_BACKEND_URL: backendUrl },
-      shell: process.platform === "win32",
+      shell: false,
       stdio: "ignore",
       windowsHide: true
     });
@@ -146,6 +152,21 @@ export function createElectronHostLauncher({ hostRoot = electronHostRoot } = {})
 
     return { host: "electron", status: "starting", backendUrl };
   };
+}
+
+function electronLaunchCommand(hostRoot, fileExists) {
+  const executablePath =
+    process.platform === "win32"
+      ? join(hostRoot, "node_modules", "electron", "dist", "electron.exe")
+      : join(hostRoot, "node_modules", "electron", "dist", "electron");
+
+  if (fileExists(executablePath)) {
+    return { file: executablePath, args: [hostRoot] };
+  }
+
+  return process.platform === "win32"
+    ? { file: "cmd.exe", args: ["/d", "/s", "/c", "npm start"] }
+    : { file: "npm", args: ["start"] };
 }
 
 function isStaticRequest(path) {
