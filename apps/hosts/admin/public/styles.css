@@ -454,6 +454,10 @@ button.implementation-link {
   text-transform: uppercase;
 }
 
+.setup-status span {
+  overflow-wrap: anywhere;
+}
+
 .setup-status pre {
   max-height: 118px;
   overflow: auto;

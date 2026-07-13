@@ -108,12 +108,15 @@ elements.implementationTabs.addEventListener("click", (event) => {
 
 await initialize();
 window.setInterval(() => {
-  if (state.activeWorkspaceId) {
-    runAction(async () => {
+  runAction(async () => {
+    if (state.mauiSetup?.status === "starting" || state.mauiSetup?.status === "running") {
+      await loadMauiSetupStatus();
+    }
+    if (state.activeWorkspaceId) {
       await refreshActiveWorkspace();
-      render();
-    });
-  }
+    }
+    render();
+  });
 }, 2500);
 
 async function initialize() {
@@ -578,9 +581,9 @@ function mauiSetupStatusPanel() {
   status.textContent = `Setup: ${state.mauiSetup?.status ?? "unknown"}`;
 
   const command = document.createElement("span");
-  command.textContent = state.mauiSetup?.command ?? "dotnet workload install maui";
+  command.textContent = `Command: ${state.mauiSetup?.command ?? "dotnet workload install maui"}`;
 
-  panel.append(status, command);
+  panel.append(status, command, ...mauiSetupDetails());
 
   if (state.mauiSetup?.lastOutput) {
     const output = document.createElement("pre");
@@ -589,6 +592,27 @@ function mauiSetupStatusPanel() {
   }
 
   return panel;
+}
+
+function mauiSetupDetails() {
+  if (!state.mauiSetup) {
+    return [];
+  }
+
+  const details = [
+    ["Started", state.mauiSetup.startedAt],
+    ["Finished", state.mauiSetup.finishedAt],
+    ["Exit", state.mauiSetup.exitCode === null || state.mauiSetup.exitCode === undefined ? null : String(state.mauiSetup.exitCode)],
+    ["Log", state.mauiSetup.logPath]
+  ];
+
+  return details
+    .filter(([, value]) => value)
+    .map(([label, value]) => {
+      const item = document.createElement("span");
+      item.textContent = `${label}: ${value}`;
+      return item;
+    });
 }
 
 function adminMetrics() {
