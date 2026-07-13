@@ -1,0 +1,13 @@
+{
+  "name": "@dzone/electron-host",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Electron desktop host for the DZONE shared platform.",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^31.7.7"
+  }
+}

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DZONE Desktop Host</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <header class="desktop-topbar">
+      <div>
+        <p class="eyebrow">Electron Host</p>
+        <h1>Desktop Workspace</h1>
+      </div>
+      <div class="backend-chip" id="backendStatus">Checking backend</div>
+    </header>
+
+    <main class="desktop-shell">
+      <aside class="rail">
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Workspaces</h2>
+            <span id="workspaceCount">0</span>
+          </div>
+          <form id="workspaceForm" class="stack">
+            <label>
+              Workspace
+              <input id="workspaceName" name="name" required autocomplete="off">
+            </label>
+            <button type="submit">Create Workspace</button>
+          </form>
+          <div class="workspace-list" id="workspaceList"></div>
+        </section>
+      </aside>
+
+      <section class="content">
+        <section class="hero-panel">
+          <div>
+            <p class="eyebrow" id="activeWorkspaceLabel">No workspace selected</p>
+            <h2 id="activeWorkspaceName">Documents</h2>
+          </div>
+          <div class="metrics">
+            <div><strong id="documentCount">0</strong><span>Documents</span></div>
+            <div><strong id="jobCount">0</strong><span>Jobs</span></div>
+            <div><strong id="fileCount">0</strong><span>Files</span></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Create Document</h2>
+          </div>
+          <form id="documentForm" class="document-form">
+            <label>
+              Title
+              <input id="documentTitle" name="title" required autocomplete="off">
+            </label>
+            <label>
+              Tags
+              <input id="documentTags" name="tags" autocomplete="off" placeholder="desktop, offline">
+            </label>
+            <button type="submit">Add Document</button>
+          </form>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Documents</h2>
+            <button class="secondary" id="refreshButton" type="button">Refresh</button>
+          </div>
+          <div class="document-list" id="documentList"></div>
+          <div class="empty" id="documentEmpty">Create or select a workspace to begin.</div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Jobs</h2>
+          </div>
+          <div class="job-list" id="jobList"></div>
+        </section>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="./renderer.js"></script>
+  </body>
+</html>

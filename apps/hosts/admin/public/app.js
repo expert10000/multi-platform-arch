@@ -364,9 +364,11 @@ function implementationSections(metrics) {
       },
       {
         name: "Electron Host",
-        status: "Planned",
-        summary: "Desktop shell for local files, offline workspace support, and backend switching.",
-        facts: ["Can use local SQLite", "Can call Node or Python backend", "Good fit for file-heavy workflows"]
+        status: "Available",
+        summary: "Desktop shell for local files, workspace browsing, uploads, jobs, and backend switching.",
+        href: "https://github.com/expert10000/multi-platform-arch/tree/main/apps/hosts/electron",
+        action: "Open Electron Host",
+        facts: ["Uses shared API client", "Can call Node or Python backend", "Good fit for file-heavy workflows"]
       }
     ],
     backends: [

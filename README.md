@@ -26,6 +26,7 @@ apps/
   backends/python/             Python HTTP implementation of the same contract
   hosts/admin/public/          Central admin console
   hosts/web/public/            Separate web workspace host
+  hosts/electron/              Desktop host scaffold
   hosts/shared/public/         Contract-named browser API client
 tests/
   platform.test.js             Service-level verification
@@ -70,6 +71,19 @@ Both backends expose the same OpenAPI route surface. The Python backend keeps
 metadata in memory and stores uploaded bytes under `data/python-files/`.
 Both backends allow cross-origin requests so hosts can be served separately and
 point their API client at either backend URL.
+
+## Hosts
+
+Run the Electron desktop host after installing its local dependencies:
+
+```bash
+cd apps/hosts/electron
+npm install
+npm start
+```
+
+By default the Electron host talks to `http://localhost:3000`. Set
+`DZONE_BACKEND_URL` to point it at another compatible backend.
 
 Example:
 

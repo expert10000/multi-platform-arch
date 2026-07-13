@@ -12,6 +12,7 @@ The template has been translated into a small working platform starter. The impl
 - Python HTTP transport lives in `apps/backends/python/app.py`
 - the central admin host lives in `apps/hosts/admin/public`
 - the web workspace host lives in `apps/hosts/web/public`
+- the Electron desktop host lives in `apps/hosts/electron`
 - the browser API client lives in `apps/hosts/shared/public/apiClient.js`
 
 ## Shared Business Platform
@@ -26,7 +27,7 @@ The API boundary is described in `contracts/openapi.yaml`. Backends should imple
 
 The current browser client uses operation names that match the OpenAPI `operationId` values. Contract coverage tests compare those names against the OpenAPI document and exercise each route through the backend.
 
-The admin host manages runtime visibility for hosts, backends, and workers. The separate web host focuses on workspaces, documents, uploads, and jobs.
+The admin host manages runtime visibility for hosts, backends, and workers. The separate web and Electron hosts focus on workspaces, documents, uploads, and jobs.
 
 ## Runtime Hosts
 
