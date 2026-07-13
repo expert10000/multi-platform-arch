@@ -19,6 +19,7 @@ test("serves the central admin host from the backend root", async () => {
     const html = await response.text();
 
     assert.equal(response.status, 200);
+    assert.equal(response.headers.get("cache-control"), "no-store");
     assert.match(html, /Central Admin Console/);
   } finally {
     server.close();

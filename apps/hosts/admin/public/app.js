@@ -109,7 +109,7 @@ elements.implementationTabs.addEventListener("click", (event) => {
 await initialize();
 window.setInterval(() => {
   runAction(async () => {
-    if (state.mauiSetup?.status === "starting" || state.mauiSetup?.status === "running") {
+    if (isMauiSetupActive()) {
       await loadMauiSetupStatus();
     }
     if (state.activeWorkspaceId) {
@@ -449,7 +449,7 @@ function implementationSections(metrics) {
 function implementationCard(implementation) {
   const article = document.createElement("article");
   article.className = "implementation-card";
-  if (implementation.statusView === "mauiSetup") {
+  if (shouldExpandImplementationCard(implementation)) {
     article.classList.add("wide");
   }
 
@@ -528,6 +528,14 @@ function implementationCard(implementation) {
   }
   article.append(facts);
   return article;
+}
+
+function shouldExpandImplementationCard(implementation) {
+  return implementation.statusView === "mauiSetup" && isMauiSetupActive();
+}
+
+function isMauiSetupActive() {
+  return state.mauiSetup?.status === "starting" || state.mauiSetup?.status === "running";
 }
 
 async function launchHost(command) {

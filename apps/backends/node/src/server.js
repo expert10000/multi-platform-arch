@@ -509,7 +509,8 @@ async function tryServeStatic(path, response) {
     const filePath = join(root, normalizedPath);
     const content = await readFile(filePath);
     response.writeHead(200, {
-      "content-type": contentTypeFor(filePath)
+      "content-type": contentTypeFor(filePath),
+      "cache-control": "no-store"
     });
     response.end(content);
     return true;
