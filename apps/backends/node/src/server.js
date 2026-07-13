@@ -207,12 +207,12 @@ function electronLaunchCommand(hostRoot, fileExists) {
       : join(hostRoot, "node_modules", "electron", "dist", "electron");
 
   if (fileExists(executablePath)) {
-    return { file: executablePath, args: [hostRoot] };
+    return { file: executablePath, args: ["."], windowsHide: false };
   }
 
   return process.platform === "win32"
-    ? { file: "cmd.exe", args: ["/d", "/s", "/c", "npm start"] }
-    : { file: "npm", args: ["start"] };
+    ? { file: "cmd.exe", args: ["/d", "/s", "/c", "npm start"], windowsHide: true }
+    : { file: "npm", args: ["start"], windowsHide: false };
 }
 
 function focusElectronHost(command, hostRoot, backendUrl, spawnProcess) {
@@ -227,7 +227,7 @@ function spawnElectronHost(command, hostRoot, backendUrl, spawnProcess) {
     env: { ...process.env, DZONE_BACKEND_URL: backendUrl },
     shell: false,
     stdio: "ignore",
-    windowsHide: true
+    windowsHide: command.windowsHide
   });
 }
 
