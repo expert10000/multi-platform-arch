@@ -1,0 +1,144 @@
+<Window x:Class="DzoneMauiHost.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="DZONE .NET MAUI Host"
+        Width="1180"
+        Height="760"
+        MinWidth="940"
+        MinHeight="620"
+        Background="#EDF1F4">
+  <Window.Resources>
+    <Style TargetType="Button">
+      <Setter Property="MinHeight" Value="36" />
+      <Setter Property="Padding" Value="12,7" />
+      <Setter Property="Margin" Value="0,0,8,0" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style TargetType="TextBox">
+      <Setter Property="MinHeight" Value="36" />
+      <Setter Property="Padding" Value="8" />
+    </Style>
+    <Style TargetType="ListBox">
+      <Setter Property="BorderBrush" Value="#D5DEE5" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+  </Window.Resources>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="White" BorderBrush="#D5DEE5" BorderThickness="0,0,0,1" Padding="18">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="560" />
+        </Grid.ColumnDefinitions>
+
+        <StackPanel>
+          <TextBlock Text=".NET MAUI HOST" Foreground="#617181" FontSize="12" FontWeight="Bold" />
+          <TextBlock Text="Desktop Workspace" Foreground="#15202A" FontSize="26" FontWeight="Bold" />
+        </StackPanel>
+
+        <Grid Grid.Column="1">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <TextBox x:Name="BackendUrlBox" VerticalAlignment="Center" />
+          <Button Grid.Column="1" Content="Connect" Click="ConnectClicked" />
+          <Border Grid.Column="2" Background="#EEF7F4" BorderBrush="#D5DEE5" BorderThickness="1" CornerRadius="8" Padding="10,8">
+            <TextBlock x:Name="RuntimeStatus" Text="Checking backend" Foreground="#146C63" FontWeight="Bold" />
+          </Border>
+        </Grid>
+      </Grid>
+    </Border>
+
+    <Grid Margin="18">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="320" />
+        <ColumnDefinition Width="18" />
+        <ColumnDefinition Width="*" />
+      </Grid.ColumnDefinitions>
+
+      <Border Background="White" BorderBrush="#D5DEE5" BorderThickness="1" CornerRadius="8">
+        <DockPanel>
+          <Grid DockPanel.Dock="Top" Margin="14">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="Workspaces" FontSize="18" FontWeight="Bold" />
+            <TextBlock x:Name="WorkspaceCount" Grid.Column="1" Text="0" Foreground="#617181" FontWeight="Bold" />
+          </Grid>
+          <StackPanel DockPanel.Dock="Top" Margin="14,0,14,14">
+            <TextBox x:Name="WorkspaceNameBox" />
+            <Button Content="Create Workspace" Margin="0,10,0,0" Click="CreateWorkspaceClicked" />
+          </StackPanel>
+          <ListBox x:Name="WorkspaceList" Margin="14" DisplayMemberPath="Name" SelectionChanged="WorkspaceSelectionChanged" />
+        </DockPanel>
+      </Border>
+
+      <Grid Grid.Column="2">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="14" />
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="14" />
+          <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Background="White" BorderBrush="#D5DEE5" BorderThickness="1" CornerRadius="8" Padding="16">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+              <TextBlock x:Name="ActiveWorkspaceLabel" Text="No workspace selected" Foreground="#617181" FontSize="12" FontWeight="Bold" />
+              <TextBlock x:Name="ActiveWorkspaceName" Text="Documents" FontSize="22" FontWeight="Bold" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+              <TextBlock x:Name="DocumentCount" Margin="18,0" FontSize="22" FontWeight="Bold" />
+              <TextBlock x:Name="JobCount" Margin="18,0" FontSize="22" FontWeight="Bold" />
+              <Button Content="Refresh" Click="RefreshClicked" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <Border Grid.Row="2" Background="White" BorderBrush="#D5DEE5" BorderThickness="1" CornerRadius="8" Padding="16">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="220" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="DocumentTitleBox" />
+            <TextBox x:Name="DocumentTagsBox" Grid.Column="1" Margin="10,0" />
+            <Button Grid.Column="2" Content="Add Document" Click="CreateDocumentClicked" />
+          </Grid>
+        </Border>
+
+        <Grid Grid.Row="4">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="14" />
+            <ColumnDefinition Width="320" />
+          </Grid.ColumnDefinitions>
+
+          <Border Background="White" BorderBrush="#D5DEE5" BorderThickness="1" CornerRadius="8" Padding="14">
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Top" Text="Documents" FontSize="18" FontWeight="Bold" Margin="0,0,0,12" />
+              <ListBox x:Name="DocumentList" DisplayMemberPath="Summary" />
+            </DockPanel>
+          </Border>
+
+          <Border Grid.Column="2" Background="White" BorderBrush="#D5DEE5" BorderThickness="1" CornerRadius="8" Padding="14">
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Top" Text="Jobs" FontSize="18" FontWeight="Bold" Margin="0,0,0,12" />
+              <ListBox x:Name="JobList" DisplayMemberPath="Summary" />
+            </DockPanel>
+          </Border>
+        </Grid>
+      </Grid>
+    </Grid>
+  </DockPanel>
+</Window>

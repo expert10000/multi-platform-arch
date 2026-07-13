@@ -13,7 +13,9 @@ export const apiOperations = Object.freeze({
   listJobs: "GET /jobs",
   getJob: "GET /jobs/{id}",
   launchElectronHost: "POST /runtime/hosts/electron/open",
-  closeElectronHost: "POST /runtime/hosts/electron/close"
+  closeElectronHost: "POST /runtime/hosts/electron/close",
+  launchMauiHost: "POST /runtime/hosts/maui/open",
+  closeMauiHost: "POST /runtime/hosts/maui/close"
 });
 
 export const platformApi = createPlatformApi();
@@ -95,6 +97,18 @@ export function createPlatformApi({ baseUrl = "" } = {}) {
 
     closeElectronHost() {
       return request(baseUrl, "/runtime/hosts/electron/close", {
+        method: "POST"
+      });
+    },
+
+    launchMauiHost() {
+      return request(baseUrl, "/runtime/hosts/maui/open", {
+        method: "POST"
+      });
+    },
+
+    closeMauiHost() {
+      return request(baseUrl, "/runtime/hosts/maui/close", {
         method: "POST"
       });
     }

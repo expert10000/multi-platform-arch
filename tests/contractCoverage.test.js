@@ -43,6 +43,14 @@ test("backend covers every OpenAPI operation", async () => {
     coveredOperations.add("closeElectronHost");
     assert.equal(close.host, "electron");
 
+    const mauiLaunch = await api.launchMauiHost();
+    coveredOperations.add("launchMauiHost");
+    assert.equal(mauiLaunch.host, "maui");
+
+    const mauiClose = await api.closeMauiHost();
+    coveredOperations.add("closeMauiHost");
+    assert.equal(mauiClose.host, "maui");
+
     const initialWorkspaces = await api.listWorkspaces();
     coveredOperations.add("listWorkspaces");
     assert.deepEqual(initialWorkspaces, []);
@@ -165,6 +173,21 @@ async function startServer(options) {
     launchElectronHost: async ({ backendUrl }) => ({
       host: "electron",
       status: "starting",
+      backendUrl
+    }),
+    closeElectronHost: async ({ backendUrl }) => ({
+      host: "electron",
+      status: "stopping",
+      backendUrl
+    }),
+    launchMauiHost: async ({ backendUrl }) => ({
+      host: "maui",
+      status: "starting",
+      backendUrl
+    }),
+    closeMauiHost: async ({ backendUrl }) => ({
+      host: "maui",
+      status: "stopping",
       backendUrl
     })
   });

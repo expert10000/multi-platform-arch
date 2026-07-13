@@ -10,6 +10,7 @@ const adminPublicRoot = fileURLToPath(new URL("../../../hosts/admin/public", imp
 const webPublicRoot = fileURLToPath(new URL("../../../hosts/web/public", import.meta.url));
 const sharedPublicRoot = fileURLToPath(new URL("../../../hosts/shared/public", import.meta.url));
 const electronHostRoot = fileURLToPath(new URL("../../../hosts/electron/", import.meta.url));
+const mauiHostRoot = fileURLToPath(new URL("../../../hosts/maui/", import.meta.url));
 const defaultFileStorageRoot = fileURLToPath(new URL("../../../../data/files/", import.meta.url));
 
 export function createServer(
@@ -19,7 +20,9 @@ export function createServer(
   const {
     fileStorageRoot = defaultFileStorageRoot,
     launchElectronHost,
-    closeElectronHost
+    closeElectronHost,
+    launchMauiHost,
+    closeMauiHost
   } = options;
   const electronHostController =
     launchElectronHost || closeElectronHost
@@ -28,6 +31,13 @@ export function createServer(
           closeElectronHost: closeElectronHost ?? defaultCloseElectronHost
         }
       : createElectronHostController();
+  const mauiHostController =
+    launchMauiHost || closeMauiHost
+      ? {
+          launchMauiHost,
+          closeMauiHost: closeMauiHost ?? defaultCloseMauiHost
+        }
+      : createMauiHostController();
   const service = platform.services.documents;
 
   return createHttpServer(async (request, response) => {
@@ -57,6 +67,14 @@ export function createServer(
 
       if (method === "POST" && path === "/runtime/hosts/electron/close") {
         return sendJson(response, 202, await electronHostController.closeElectronHost({ backendUrl: requestBaseUrl(request) }));
+      }
+
+      if (method === "POST" && path === "/runtime/hosts/maui/open") {
+        return sendJson(response, 202, await mauiHostController.launchMauiHost({ backendUrl: requestBaseUrl(request) }));
+      }
+
+      if (method === "POST" && path === "/runtime/hosts/maui/close") {
+        return sendJson(response, 202, await mauiHostController.closeMauiHost({ backendUrl: requestBaseUrl(request) }));
       }
 
       if (method === "GET" && path === "/workspaces") {
@@ -200,6 +218,48 @@ export function createElectronHostController({
   };
 }
 
+export function createMauiHostController({
+  hostRoot = mauiHostRoot,
+  fileExists = existsSync,
+  spawnProcess = spawn,
+  isProcessRunning = isChildProcessRunning,
+  stopProcess = stopChildProcess
+} = {}) {
+  let hostProcess = null;
+
+  return {
+    async launchMauiHost({ backendUrl }) {
+      const command = mauiLaunchCommand(hostRoot, fileExists);
+
+      if (isProcessRunning(hostProcess)) {
+        focusRuntimeHost(command, hostRoot, backendUrl, spawnProcess);
+        return { host: "maui", status: "running", backendUrl };
+      }
+      hostProcess = null;
+
+      hostProcess = spawnRuntimeHost(command, hostRoot, backendUrl, spawnProcess);
+      hostProcess.once?.("exit", () => {
+        hostProcess = null;
+      });
+      hostProcess.unref();
+
+      return { host: "maui", status: "starting", backendUrl };
+    },
+
+    async closeMauiHost({ backendUrl }) {
+      if (!isProcessRunning(hostProcess)) {
+        hostProcess = null;
+        return { host: "maui", status: "stopped", backendUrl };
+      }
+
+      const processToStop = hostProcess;
+      hostProcess = null;
+      stopProcess(processToStop, spawnProcess);
+      return { host: "maui", status: "stopping", backendUrl };
+    }
+  };
+}
+
 function electronLaunchCommand(hostRoot, fileExists) {
   const executablePath =
     process.platform === "win32"
@@ -216,11 +276,20 @@ function electronLaunchCommand(hostRoot, fileExists) {
 }
 
 function focusElectronHost(command, hostRoot, backendUrl, spawnProcess) {
-  const focusProcess = spawnElectronHost(command, hostRoot, backendUrl, spawnProcess);
+  const focusProcess = spawnRuntimeHost(command, hostRoot, backendUrl, spawnProcess);
   focusProcess.unref();
 }
 
 function spawnElectronHost(command, hostRoot, backendUrl, spawnProcess) {
+  return spawnRuntimeHost(command, hostRoot, backendUrl, spawnProcess);
+}
+
+function focusRuntimeHost(command, hostRoot, backendUrl, spawnProcess) {
+  const focusProcess = spawnRuntimeHost(command, hostRoot, backendUrl, spawnProcess);
+  focusProcess.unref();
+}
+
+function spawnRuntimeHost(command, hostRoot, backendUrl, spawnProcess) {
   return spawnProcess(command.file, command.args, {
     cwd: hostRoot,
     detached: true,
@@ -229,6 +298,20 @@ function spawnElectronHost(command, hostRoot, backendUrl, spawnProcess) {
     stdio: "ignore",
     windowsHide: command.windowsHide
   });
+}
+
+function mauiLaunchCommand(hostRoot, fileExists) {
+  const executablePath = join(hostRoot, "bin", "Debug", "net10.0-windows", "DzoneMauiHost.exe");
+
+  if (fileExists(executablePath)) {
+    return { file: executablePath, args: [], windowsHide: false };
+  }
+
+  return {
+    file: "dotnet",
+    args: ["run", "--project", "DzoneMauiHost.csproj", "--no-launch-profile"],
+    windowsHide: true
+  };
 }
 
 function isChildProcessRunning(childProcess) {
@@ -267,6 +350,10 @@ function stopChildProcess(childProcess, spawnProcess) {
 
 async function defaultCloseElectronHost({ backendUrl }) {
   return { host: "electron", status: "stopped", backendUrl };
+}
+
+async function defaultCloseMauiHost({ backendUrl }) {
+  return { host: "maui", status: "stopped", backendUrl };
 }
 
 function isStaticRequest(path) {

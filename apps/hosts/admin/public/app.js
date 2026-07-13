@@ -358,9 +358,12 @@ function implementationSections(metrics) {
       },
       {
         name: ".NET MAUI Host",
-        status: "Planned",
-        summary: "Native desktop/mobile host for document review, workspace browsing, and job status.",
-        facts: ["Consumes OpenAPI", "Uses same DTOs", "Can target Windows, macOS, Android, iOS"]
+        status: "Available",
+        summary: "Native .NET desktop host for workspace review, documents, jobs, and the shared platform contract.",
+        command: "launchMauiHost",
+        stopCommand: "closeMauiHost",
+        action: "Launch .NET Desktop",
+        facts: ["Consumes OpenAPI", "Uses same DTOs", "MAUI-ready host boundary"]
       },
       {
         name: "Electron Host",
@@ -457,38 +460,42 @@ function implementationCard(implementation) {
     link.textContent = implementation.action ?? "Open";
     article.append(link);
   }
-  if (implementation.command === "launchElectronHost") {
+  if (implementation.command) {
     const button = document.createElement("button");
     button.className = "implementation-link";
     button.type = "button";
     button.textContent = implementation.action ?? "Launch";
-    button.addEventListener("click", () => launchElectronHost());
+    button.addEventListener("click", () => launchHost(implementation.command));
     article.append(button);
   }
-  if (implementation.stopCommand === "closeElectronHost") {
+  if (implementation.stopCommand) {
     const button = document.createElement("button");
     button.className = "implementation-link stop";
     button.type = "button";
-    button.textContent = "Stop Desktop";
-    button.addEventListener("click", () => closeElectronHost());
+    button.textContent = implementation.command === "launchMauiHost" ? "Stop .NET Desktop" : "Stop Desktop";
+    button.addEventListener("click", () => closeHost(implementation.stopCommand));
     article.append(button);
   }
   article.append(facts);
   return article;
 }
 
-async function launchElectronHost() {
+async function launchHost(command) {
   await runAction(async () => {
-    const result = await platformApi.launchElectronHost();
-    showToast(result.status === "running" ? "Desktop is already running." : "Desktop is launching.");
+    const result = await platformApi[command]();
+    showToast(result.status === "running" ? `${hostLabel(result.host)} is already running.` : `${hostLabel(result.host)} is launching.`);
   });
 }
 
-async function closeElectronHost() {
+async function closeHost(command) {
   await runAction(async () => {
-    const result = await platformApi.closeElectronHost();
-    showToast(result.status === "stopped" ? "Desktop is not running." : "Desktop is closing.");
+    const result = await platformApi[command]();
+    showToast(result.status === "stopped" ? `${hostLabel(result.host)} is not running.` : `${hostLabel(result.host)} is closing.`);
   });
+}
+
+function hostLabel(host) {
+  return host === "maui" ? ".NET desktop" : "Desktop";
 }
 
 function adminMetrics() {

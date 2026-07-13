@@ -36,6 +36,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RuntimeHostLaunchResult"
+  /runtime/hosts/maui/open:
+    post:
+      operationId: launchMauiHost
+      responses:
+        "202":
+          description: .NET MAUI host launch requested.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeHostLaunchResult"
+  /runtime/hosts/maui/close:
+    post:
+      operationId: closeMauiHost
+      responses:
+        "202":
+          description: .NET MAUI host close requested.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeHostLaunchResult"
   /workspaces:
     get:
       operationId: listWorkspaces
@@ -382,7 +402,7 @@ components:
       properties:
         host:
           type: string
-          enum: [electron]
+          enum: [electron, maui]
         status:
           type: string
           enum: [starting, running, stopping, stopped]
