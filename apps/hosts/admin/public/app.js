@@ -449,6 +449,9 @@ function implementationSections(metrics) {
 function implementationCard(implementation) {
   const article = document.createElement("article");
   article.className = "implementation-card";
+  if (implementation.statusView === "mauiSetup") {
+    article.classList.add("wide");
+  }
 
   const header = document.createElement("div");
   header.className = "implementation-card-header";

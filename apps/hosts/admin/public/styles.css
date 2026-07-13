@@ -362,6 +362,10 @@ button:focus-visible {
   background: #fff;
 }
 
+.implementation-card.wide {
+  grid-column: 1 / -1;
+}
+
 .implementation-card-header {
   display: flex;
   align-items: flex-start;
@@ -448,6 +452,10 @@ button.implementation-link {
   line-height: 1.35;
 }
 
+.implementation-card.wide .setup-status {
+  width: 100%;
+}
+
 .setup-status-label {
   color: var(--ink);
   font-weight: 850;
@@ -459,7 +467,8 @@ button.implementation-link {
 }
 
 .setup-status pre {
-  max-height: 118px;
+  max-height: 320px;
+  min-height: 180px;
   overflow: auto;
   margin: 0;
   border-radius: 6px;
