@@ -16,6 +16,8 @@ const elements = {
   backendStatus: document.querySelector("#backendStatus"),
   backendForm: document.querySelector("#backendForm"),
   backendUrlInput: document.querySelector("#backendUrlInput"),
+  openAdminButton: document.querySelector("#openAdminButton"),
+  openWebButton: document.querySelector("#openWebButton"),
   workspaceForm: document.querySelector("#workspaceForm"),
   workspaceName: document.querySelector("#workspaceName"),
   workspaceCount: document.querySelector("#workspaceCount"),
@@ -40,6 +42,14 @@ elements.backendUrlInput.value = backendUrl;
 elements.backendForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   await runAction(() => connectBackend(new FormData(elements.backendForm)));
+});
+
+elements.openAdminButton.addEventListener("click", () => {
+  runAction(() => openBrowserSurface("/admin/"));
+});
+
+elements.openWebButton.addEventListener("click", () => {
+  runAction(() => openBrowserSurface("/web/"));
 });
 
 elements.workspaceForm.addEventListener("submit", async (event) => {
@@ -87,6 +97,16 @@ async function connectBackend(formData) {
   state.activeWorkspaceId = null;
   await initialize();
   showToast("Desktop host connected.");
+}
+
+async function openBrowserSurface(path) {
+  if (!window.dzoneDesktop?.openBrowser) {
+    showToast("Browser handoff unavailable.");
+    return;
+  }
+
+  await window.dzoneDesktop.openBrowser(path, backendUrl);
+  showToast("Opened in browser.");
 }
 
 async function loadHealth() {

@@ -41,6 +41,20 @@ button,
   background: #fff;
 }
 
+.topbar-tools {
+  display: flex;
+  align-items: end;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 0;
+}
+
+.desktop-actions {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 1px;
+}
+
 .backend-control {
   display: grid;
   grid-template-columns: minmax(250px, 360px) auto auto;
@@ -181,6 +195,11 @@ button[type="submit"] {
   background: #fff;
   color: var(--ink);
   font-size: 13px;
+}
+
+.compact {
+  min-height: 40px;
+  white-space: nowrap;
 }
 
 .workspace-list,
@@ -345,7 +364,8 @@ button[type="submit"] {
   }
 
   .hero-panel,
-  .desktop-topbar {
+  .desktop-topbar,
+  .topbar-tools {
     align-items: flex-start;
     flex-direction: column;
   }

@@ -10,6 +10,7 @@ It uses its own renderer and the shared browser API client. It exposes the same 
 - queue document processing
 - monitor jobs
 - switch between compatible backends
+- open the Admin and Web Host surfaces in the system browser
 
 By default it talks to the local Node backend at `http://localhost:3000`. The desktop UI also includes a backend field and remembers the last connected backend on that machine.
 

@@ -12,14 +12,20 @@
         <p class="eyebrow">Electron Host</p>
         <h1>Desktop Workspace</h1>
       </div>
-      <form class="backend-control" id="backendForm">
-        <label>
-          Backend
-          <input id="backendUrlInput" name="backendUrl" required spellcheck="false">
-        </label>
-        <button type="submit">Connect</button>
-        <div class="backend-chip" id="backendStatus">Checking backend</div>
-      </form>
+      <div class="topbar-tools">
+        <div class="desktop-actions" aria-label="Open browser surfaces">
+          <button class="secondary compact" id="openAdminButton" type="button">Admin</button>
+          <button class="secondary compact" id="openWebButton" type="button">Web Host</button>
+        </div>
+        <form class="backend-control" id="backendForm">
+          <label>
+            Backend
+            <input id="backendUrlInput" name="backendUrl" required spellcheck="false">
+          </label>
+          <button type="submit">Connect</button>
+          <div class="backend-chip" id="backendStatus">Checking backend</div>
+        </form>
+      </div>
     </header>
 
     <main class="desktop-shell">

@@ -60,9 +60,12 @@ test("electron host exposes desktop workspace document and job surfaces", async 
   const html = await readFile(new URL("../apps/hosts/electron/renderer/index.html", import.meta.url), "utf8");
   const rendererSource = await readFile(new URL("../apps/hosts/electron/renderer/renderer.js", import.meta.url), "utf8");
   const mainSource = await readFile(new URL("../apps/hosts/electron/main.cjs", import.meta.url), "utf8");
+  const preloadSource = await readFile(new URL("../apps/hosts/electron/preload.cjs", import.meta.url), "utf8");
 
   assert.match(html, /Desktop Workspace/);
   assert.match(html, /backendUrlInput/);
+  assert.match(html, /openAdminButton/);
+  assert.match(html, /openWebButton/);
   assert.match(html, /Workspaces/);
   assert.match(html, /Documents/);
   assert.match(html, /Jobs/);
@@ -74,5 +77,12 @@ test("electron host exposes desktop workspace document and job surfaces", async 
   assert.match(rendererSource, /renderJobs/);
   assert.match(rendererSource, /uploadDocumentFile/);
   assert.match(rendererSource, /processDocument/);
+  assert.match(rendererSource, /openBrowserSurface/);
+  assert.match(rendererSource, /dzoneDesktop/);
   assert.match(mainSource, /DZONE_BACKEND_URL/);
+  assert.match(mainSource, /preload\.cjs/);
+  assert.match(mainSource, /open-platform-browser/);
+  assert.match(mainSource, /openExternal/);
+  assert.match(preloadSource, /contextBridge/);
+  assert.match(preloadSource, /openBrowser/);
 });

@@ -1,7 +1,20 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, ipcMain, shell } = require("electron");
 const path = require("node:path");
 
 const backendUrl = process.env.DZONE_BACKEND_URL || "http://localhost:3000";
+const browserPaths = new Set(["/admin/", "/web/"]);
+
+function browserUrl(baseUrl, routePath) {
+  if (!browserPaths.has(routePath)) {
+    throw new Error("Unsupported browser route.");
+  }
+
+  const url = new URL(routePath, baseUrl);
+  if (!["http:", "https:"].includes(url.protocol)) {
+    throw new Error("Unsupported browser protocol.");
+  }
+  return url.toString();
+}
 
 function createWindow() {
   const window = new BrowserWindow({
@@ -13,7 +26,8 @@ function createWindow() {
     backgroundColor: "#f2f5f7",
     webPreferences: {
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      preload: path.join(__dirname, "preload.cjs")
     }
   });
 
@@ -21,6 +35,12 @@ function createWindow() {
     query: { backendUrl }
   });
 }
+
+ipcMain.handle("open-platform-browser", async (_event, payload) => {
+  const url = browserUrl(payload?.baseUrl || backendUrl, payload?.path);
+  await shell.openExternal(url);
+  return url;
+});
 
 app.whenReady().then(() => {
   createWindow();
