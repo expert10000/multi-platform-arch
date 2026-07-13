@@ -1,8 +1,8 @@
 import { createServer as createHttpServer } from "node:http";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { extname, join, normalize } from "node:path";
+import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createPlatform, NotFoundError, ValidationError } from "../../../../packages/platform/src/index.js";
 
@@ -13,6 +13,7 @@ const electronHostRoot = fileURLToPath(new URL("../../../hosts/electron/", impor
 const dotnetDesktopHostRoot = fileURLToPath(new URL("../../../hosts/dotnet-desktop/", import.meta.url));
 const repoRoot = fileURLToPath(new URL("../../../../", import.meta.url));
 const mauiInstallScript = fileURLToPath(new URL("../../../../scripts/install-maui-workload.ps1", import.meta.url));
+const defaultMauiSetupLog = fileURLToPath(new URL("../../../../data/runtime/maui-setup.log", import.meta.url));
 const defaultFileStorageRoot = fileURLToPath(new URL("../../../../data/files/", import.meta.url));
 
 export function createServer(
@@ -25,7 +26,8 @@ export function createServer(
     closeElectronHost,
     launchDotnetDesktopHost,
     closeDotnetDesktopHost,
-    setupMauiHost
+    setupMauiHost,
+    getMauiSetupStatus
   } = options;
   const electronHostController =
     launchElectronHost || closeElectronHost
@@ -41,7 +43,9 @@ export function createServer(
           closeDotnetDesktopHost: closeDotnetDesktopHost ?? defaultCloseDotnetDesktopHost
         }
       : createDotnetDesktopHostController();
-  const mauiSetup = setupMauiHost ?? createMauiSetupRunner();
+  const defaultMauiSetupRunner = createMauiSetupRunner();
+  const mauiSetup = setupMauiHost ?? defaultMauiSetupRunner;
+  const mauiSetupStatus = getMauiSetupStatus ?? defaultMauiSetupRunner.status;
   const service = platform.services.documents;
 
   return createHttpServer(async (request, response) => {
@@ -83,6 +87,10 @@ export function createServer(
 
       if (method === "POST" && path === "/runtime/hosts/maui/setup") {
         return sendJson(response, 202, await mauiSetup());
+      }
+
+      if (method === "GET" && path === "/runtime/hosts/maui/setup") {
+        return sendJson(response, 200, await mauiSetupStatus());
       }
 
       if (method === "GET" && path === "/workspaces") {
@@ -271,31 +279,88 @@ export function createDotnetDesktopHostController({
 export function createMauiSetupRunner({
   scriptPath = mauiInstallScript,
   workingDirectory = repoRoot,
+  logPath = defaultMauiSetupLog,
   spawnProcess = spawn,
-  isProcessRunning = isChildProcessRunning
+  isProcessRunning = isChildProcessRunning,
+  now = () => new Date()
 } = {}) {
   let setupProcess = null;
+  let state = {
+    host: "maui",
+    status: "idle",
+    command: "dotnet workload install maui",
+    logPath,
+    startedAt: null,
+    finishedAt: null,
+    exitCode: null,
+    signal: null,
+    lastOutput: ""
+  };
 
-  return async function setupMauiHost() {
+  async function setupMauiHost() {
     if (isProcessRunning(setupProcess)) {
-      return { host: "maui", status: "running", command: "dotnet workload install maui" };
+      return setupStatus("running");
     }
     setupProcess = null;
+
+    await mkdir(dirname(logPath), { recursive: true });
+    await appendLog(logPath, `\n[maui] Setup requested at ${now().toISOString()}\n`);
+    state = {
+      ...state,
+      status: "starting",
+      startedAt: now().toISOString(),
+      finishedAt: null,
+      exitCode: null,
+      signal: null,
+      lastOutput: ""
+    };
 
     setupProcess = spawnProcess(mauiSetupExecutable(), mauiSetupArgs(scriptPath), {
       cwd: workingDirectory,
       detached: true,
       shell: false,
-      stdio: "ignore",
+      stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true
     });
-    setupProcess.once?.("exit", () => {
+    captureInstallerOutput(setupProcess.stdout, logPath, (text) => updateLastOutput(text));
+    captureInstallerOutput(setupProcess.stderr, logPath, (text) => updateLastOutput(text));
+    setupProcess.once?.("exit", async (exitCode, signal) => {
+      const finishedAt = now().toISOString();
+      const status = exitCode === 0 ? "completed" : "failed";
+      state = {
+        ...state,
+        status,
+        finishedAt,
+        exitCode,
+        signal
+      };
+      await appendLog(logPath, `[maui] Setup ${status} at ${finishedAt} (exit ${exitCode ?? "none"}${signal ? `, signal ${signal}` : ""})\n`);
       setupProcess = null;
     });
     setupProcess.unref?.();
 
-    return { host: "maui", status: "starting", command: "dotnet workload install maui" };
-  };
+    return setupStatus("starting");
+  }
+
+  async function setupStatus(statusOverride) {
+    const running = isProcessRunning(setupProcess);
+    const lastOutput = await readLogTail(logPath);
+    return {
+      ...state,
+      status: statusOverride ?? (running ? "running" : state.status),
+      lastOutput
+    };
+  }
+
+  function updateLastOutput(text) {
+    state = {
+      ...state,
+      lastOutput: trimLog(`${state.lastOutput}${text}`)
+    };
+  }
+
+  setupMauiHost.status = setupStatus;
+  return setupMauiHost;
 }
 
 function electronLaunchCommand(hostRoot, fileExists) {
@@ -358,6 +423,27 @@ function mauiSetupExecutable() {
 
 function mauiSetupArgs(scriptPath) {
   return ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptPath];
+}
+
+function captureInstallerOutput(stream, logPath, onOutput) {
+  stream?.on?.("data", (chunk) => {
+    const text = String(chunk);
+    onOutput(text);
+    appendLog(logPath, text);
+  });
+}
+
+async function appendLog(logPath, text) {
+  await appendFile(logPath, text, "utf8").catch(() => undefined);
+}
+
+async function readLogTail(logPath) {
+  const content = await readFile(logPath, "utf8").catch(() => "");
+  return trimLog(content);
+}
+
+function trimLog(content) {
+  return content.slice(-4000).trim();
 }
 
 function isChildProcessRunning(childProcess) {

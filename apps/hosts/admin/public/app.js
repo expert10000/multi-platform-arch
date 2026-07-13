@@ -4,6 +4,7 @@ const state = {
   workspaces: [],
   documents: [],
   jobs: [],
+  mauiSetup: null,
   runtimeName: "unknown",
   activeWorkspaceId: null,
   activeArchitectureSection: "models",
@@ -117,6 +118,7 @@ window.setInterval(() => {
 
 async function initialize() {
   await loadHealth();
+  await loadMauiSetupStatus();
   await loadWorkspaces();
   setDocumentFormEnabled(false);
   render();
@@ -139,6 +141,10 @@ async function loadWorkspaces() {
     state.activeWorkspaceId = state.workspaces[0].id;
   }
   await refreshActiveWorkspace();
+}
+
+async function loadMauiSetupStatus() {
+  state.mauiSetup = await platformApi.getMauiSetupStatus().catch(() => null);
 }
 
 async function refreshActiveWorkspace() {
@@ -370,6 +376,8 @@ function implementationSections(metrics) {
         status: "Optional",
         summary: "Optional MAUI desktop host for teams that want the MAUI workload and cross-device UI path.",
         setupCommand: "setupMauiHost",
+        statusCommand: "getMauiSetupStatus",
+        statusView: "mauiSetup",
         infoCommand: "showMauiInstallMessage",
         action: "Install MAUI",
         facts: ["Runs optional setup script", "Command: dotnet workload install maui", "Default host still works without MAUI"]
@@ -493,6 +501,14 @@ function implementationCard(implementation) {
     button.addEventListener("click", () => setupHost(implementation.setupCommand));
     article.append(button);
   }
+  if (implementation.statusCommand) {
+    const button = document.createElement("button");
+    button.className = "implementation-link";
+    button.type = "button";
+    button.textContent = "Setup Status";
+    button.addEventListener("click", () => refreshSetupStatus(implementation.statusCommand));
+    article.append(button);
+  }
   if (implementation.infoCommand === "showMauiInstallMessage") {
     const button = document.createElement("button");
     button.className = "implementation-link";
@@ -500,6 +516,9 @@ function implementationCard(implementation) {
     button.textContent = "Setup Command";
     button.addEventListener("click", showMauiInstallMessage);
     article.append(button);
+  }
+  if (implementation.statusView === "mauiSetup") {
+    article.append(mauiSetupStatusPanel());
   }
   article.append(facts);
   return article;
@@ -522,7 +541,17 @@ async function closeHost(command) {
 async function setupHost(command) {
   await runAction(async () => {
     const result = await platformApi[command]();
+    state.mauiSetup = result;
+    renderImplementations();
     showToast(result.status === "running" ? `${hostLabel(result.host)} is already running.` : `${hostLabel(result.host)} installer started.`);
+  });
+}
+
+async function refreshSetupStatus(command) {
+  await runAction(async () => {
+    state.mauiSetup = await platformApi[command]();
+    renderImplementations();
+    showToast(`${hostLabel(state.mauiSetup.host)} setup is ${state.mauiSetup.status}.`);
   });
 }
 
@@ -538,6 +567,28 @@ function hostLabel(host) {
 
 function showMauiInstallMessage() {
   showToast("Optional setup runs: dotnet workload install maui");
+}
+
+function mauiSetupStatusPanel() {
+  const panel = document.createElement("div");
+  panel.className = "setup-status";
+
+  const status = document.createElement("span");
+  status.className = "setup-status-label";
+  status.textContent = `Setup: ${state.mauiSetup?.status ?? "unknown"}`;
+
+  const command = document.createElement("span");
+  command.textContent = state.mauiSetup?.command ?? "dotnet workload install maui";
+
+  panel.append(status, command);
+
+  if (state.mauiSetup?.lastOutput) {
+    const output = document.createElement("pre");
+    output.textContent = state.mauiSetup.lastOutput;
+    panel.append(output);
+  }
+
+  return panel;
 }
 
 function adminMetrics() {

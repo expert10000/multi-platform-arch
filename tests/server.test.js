@@ -179,16 +179,24 @@ test("runs optional MAUI setup through the backend", async () => {
     setupMauiHost: async () => {
       setups.push({});
       return { host: "maui", status: "starting", command: "dotnet workload install maui" };
-    }
+    },
+    getMauiSetupStatus: async () => ({
+      host: "maui",
+      status: "idle",
+      command: "dotnet workload install maui",
+      lastOutput: ""
+    })
   });
   const api = createPlatformApi({ baseUrl });
 
   try {
     const result = await api.setupMauiHost();
+    const status = await api.getMauiSetupStatus();
 
     assert.equal(result.host, "maui");
     assert.equal(result.status, "starting");
     assert.equal(result.command, "dotnet workload install maui");
+    assert.equal(status.status, "idle");
     assert.equal(setups.length, 1);
   } finally {
     server.close();
@@ -337,11 +345,13 @@ test("dotnet desktop controller starts and stops the desktop host", async () => 
 });
 
 test("MAUI setup runner starts the installer once in the background", async () => {
+  const setupRoot = await mkdtemp(join(tmpdir(), "dzone-maui-setup-"));
   const launches = [];
   let unrefCalled = false;
   const runner = createMauiSetupRunner({
-    scriptPath: process.platform === "win32" ? "C:\\repo\\scripts\\install-maui-workload.ps1" : "/repo/scripts/install-maui-workload.ps1",
-    workingDirectory: process.platform === "win32" ? "C:\\repo" : "/repo",
+    scriptPath: join(setupRoot, "install-maui-workload.ps1"),
+    workingDirectory: setupRoot,
+    logPath: join(setupRoot, "maui-setup.log"),
     spawnProcess: (file, args, options) => {
       launches.push({ file, args, options });
       return {
@@ -359,19 +369,26 @@ test("MAUI setup runner starts the installer once in the background", async () =
     isProcessRunning: (childProcess) => Boolean(childProcess)
   });
 
-  const firstSetup = await runner();
-  const secondSetup = await runner();
+  try {
+    const firstSetup = await runner();
+    const secondSetup = await runner();
+    const status = await runner.status();
 
-  assert.equal(firstSetup.status, "starting");
-  assert.equal(secondSetup.status, "running");
-  assert.equal(launches.length, 1);
-  assert.match(launches[0].file, process.platform === "win32" ? /powershell\.exe$/ : /pwsh$/);
-  assert.deepEqual(launches[0].args.slice(0, 3), ["-NoProfile", "-ExecutionPolicy", "Bypass"]);
-  assert.equal(launches[0].args[3], "-File");
-  assert.match(launches[0].args[4], /install-maui-workload\.ps1$/);
-  assert.equal(launches[0].options.shell, false);
-  assert.equal(launches[0].options.windowsHide, true);
-  assert.equal(unrefCalled, true);
+    assert.equal(firstSetup.status, "starting");
+    assert.equal(secondSetup.status, "running");
+    assert.equal(status.status, "running");
+    assert.equal(launches.length, 1);
+    assert.match(launches[0].file, process.platform === "win32" ? /powershell\.exe$/ : /pwsh$/);
+    assert.deepEqual(launches[0].args.slice(0, 3), ["-NoProfile", "-ExecutionPolicy", "Bypass"]);
+    assert.equal(launches[0].args[3], "-File");
+    assert.match(launches[0].args[4], /install-maui-workload\.ps1$/);
+    assert.equal(launches[0].options.shell, false);
+    assert.deepEqual(launches[0].options.stdio, ["ignore", "pipe", "pipe"]);
+    assert.equal(launches[0].options.windowsHide, true);
+    assert.equal(unrefCalled, true);
+  } finally {
+    await rm(setupRoot, { recursive: true, force: true });
+  }
 });
 
 async function startServer(options) {

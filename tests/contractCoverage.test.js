@@ -55,6 +55,10 @@ test("backend covers every OpenAPI operation", async () => {
     coveredOperations.add("setupMauiHost");
     assert.equal(mauiSetup.host, "maui");
 
+    const mauiSetupStatus = await api.getMauiSetupStatus();
+    coveredOperations.add("getMauiSetupStatus");
+    assert.equal(mauiSetupStatus.host, "maui");
+
     const initialWorkspaces = await api.listWorkspaces();
     coveredOperations.add("listWorkspaces");
     assert.deepEqual(initialWorkspaces, []);
@@ -198,6 +202,12 @@ async function startServer(options) {
       host: "maui",
       status: "starting",
       command: "dotnet workload install maui"
+    }),
+    getMauiSetupStatus: async () => ({
+      host: "maui",
+      status: "idle",
+      command: "dotnet workload install maui",
+      lastOutput: ""
     })
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));

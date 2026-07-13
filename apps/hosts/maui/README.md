@@ -17,7 +17,8 @@ npm run setup:host:maui
 ```
 
 You can also start the same optional setup from the Admin console with the
-`Install MAUI` action on the .NET MAUI Desktop card.
+`Install MAUI` action on the .NET MAUI Desktop card. The `Setup Status` action
+shows the last captured installer output from `data/runtime/maui-setup.log`.
 
 Check whether the workload is already installed:
 

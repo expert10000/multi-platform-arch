@@ -101,7 +101,8 @@ npm run setup:host:maui
 ```
 
 The Admin console also exposes this as an explicit `Install MAUI` setup action.
-It runs the same helper script and does not install anything until clicked.
+It runs the same helper script and does not install anything until clicked. Use
+`Setup Status` on the same card to see the last installer output.
 
 Check the optional workload without installing:
 
