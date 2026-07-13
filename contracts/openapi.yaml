@@ -26,6 +26,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RuntimeHostLaunchResult"
+  /runtime/hosts/electron/close:
+    post:
+      operationId: closeElectronHost
+      responses:
+        "202":
+          description: Electron host close requested.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeHostLaunchResult"
   /workspaces:
     get:
       operationId: listWorkspaces
@@ -375,6 +385,6 @@ components:
           enum: [electron]
         status:
           type: string
-          enum: [starting, running]
+          enum: [starting, running, stopping, stopped]
         backendUrl:
           type: string

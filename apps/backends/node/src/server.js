@@ -14,11 +14,20 @@ const defaultFileStorageRoot = fileURLToPath(new URL("../../../../data/files/", 
 
 export function createServer(
   platform = createPlatform(),
-  {
-    fileStorageRoot = defaultFileStorageRoot,
-    launchElectronHost = createElectronHostLauncher()
-  } = {}
+  options = {}
 ) {
+  const {
+    fileStorageRoot = defaultFileStorageRoot,
+    launchElectronHost,
+    closeElectronHost
+  } = options;
+  const electronHostController =
+    launchElectronHost || closeElectronHost
+      ? {
+          launchElectronHost,
+          closeElectronHost: closeElectronHost ?? defaultCloseElectronHost
+        }
+      : createElectronHostController();
   const service = platform.services.documents;
 
   return createHttpServer(async (request, response) => {
@@ -43,7 +52,11 @@ export function createServer(
       }
 
       if (method === "POST" && path === "/runtime/hosts/electron/open") {
-        return sendJson(response, 202, await launchElectronHost({ backendUrl: requestBaseUrl(request) }));
+        return sendJson(response, 202, await electronHostController.launchElectronHost({ backendUrl: requestBaseUrl(request) }));
+      }
+
+      if (method === "POST" && path === "/runtime/hosts/electron/close") {
+        return sendJson(response, 202, await electronHostController.closeElectronHost({ backendUrl: requestBaseUrl(request) }));
       }
 
       if (method === "GET" && path === "/workspaces") {
@@ -131,26 +144,59 @@ export function createElectronHostLauncher({
   hostRoot = electronHostRoot,
   fileExists = existsSync,
   spawnProcess = spawn,
-  isProcessRunning = isChildProcessRunning
+  isProcessRunning = isChildProcessRunning,
+  stopProcess = stopChildProcess
+} = {}) {
+  const controller = createElectronHostController({
+    hostRoot,
+    fileExists,
+    spawnProcess,
+    isProcessRunning,
+    stopProcess
+  });
+  controller.launchElectronHost.close = controller.closeElectronHost;
+  return controller.launchElectronHost;
+}
+
+export function createElectronHostController({
+  hostRoot = electronHostRoot,
+  fileExists = existsSync,
+  spawnProcess = spawn,
+  isProcessRunning = isChildProcessRunning,
+  stopProcess = stopChildProcess
 } = {}) {
   let hostProcess = null;
 
-  return async function launchElectronHost({ backendUrl }) {
-    const command = electronLaunchCommand(hostRoot, fileExists);
+  return {
+    async launchElectronHost({ backendUrl }) {
+      const command = electronLaunchCommand(hostRoot, fileExists);
 
-    if (isProcessRunning(hostProcess)) {
-      focusElectronHost(command, hostRoot, backendUrl, spawnProcess);
-      return { host: "electron", status: "running", backendUrl };
-    }
-    hostProcess = null;
-
-    hostProcess = spawnElectronHost(command, hostRoot, backendUrl, spawnProcess);
-    hostProcess.once?.("exit", () => {
+      if (isProcessRunning(hostProcess)) {
+        focusElectronHost(command, hostRoot, backendUrl, spawnProcess);
+        return { host: "electron", status: "running", backendUrl };
+      }
       hostProcess = null;
-    });
-    hostProcess.unref();
 
-    return { host: "electron", status: "starting", backendUrl };
+      hostProcess = spawnElectronHost(command, hostRoot, backendUrl, spawnProcess);
+      hostProcess.once?.("exit", () => {
+        hostProcess = null;
+      });
+      hostProcess.unref();
+
+      return { host: "electron", status: "starting", backendUrl };
+    },
+
+    async closeElectronHost({ backendUrl }) {
+      if (!isProcessRunning(hostProcess)) {
+        hostProcess = null;
+        return { host: "electron", status: "stopped", backendUrl };
+      }
+
+      const processToStop = hostProcess;
+      hostProcess = null;
+      stopProcess(processToStop, spawnProcess);
+      return { host: "electron", status: "stopping", backendUrl };
+    }
   };
 }
 
@@ -199,6 +245,28 @@ function isChildProcessRunning(childProcess) {
   } catch {
     return false;
   }
+}
+
+function stopChildProcess(childProcess, spawnProcess) {
+  if (!childProcess?.pid) {
+    childProcess?.kill?.();
+    return;
+  }
+
+  if (process.platform === "win32") {
+    const stopProcess = spawnProcess("taskkill", ["/pid", String(childProcess.pid), "/t", "/f"], {
+      stdio: "ignore",
+      windowsHide: true
+    });
+    stopProcess.unref?.();
+    return;
+  }
+
+  childProcess.kill();
+}
+
+async function defaultCloseElectronHost({ backendUrl }) {
+  return { host: "electron", status: "stopped", backendUrl };
 }
 
 function isStaticRequest(path) {

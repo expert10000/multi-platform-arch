@@ -367,6 +367,7 @@ function implementationSections(metrics) {
         status: "Available",
         summary: "Desktop shell for local files, workspace browsing, uploads, jobs, and backend switching.",
         command: "launchElectronHost",
+        stopCommand: "closeElectronHost",
         action: "Launch Desktop",
         facts: ["Same workspace workflow as Web Host", "Can call Node or Python backend", "Good fit for file-heavy workflows"]
       }
@@ -464,6 +465,14 @@ function implementationCard(implementation) {
     button.addEventListener("click", () => launchElectronHost());
     article.append(button);
   }
+  if (implementation.stopCommand === "closeElectronHost") {
+    const button = document.createElement("button");
+    button.className = "implementation-link stop";
+    button.type = "button";
+    button.textContent = "Stop Desktop";
+    button.addEventListener("click", () => closeElectronHost());
+    article.append(button);
+  }
   article.append(facts);
   return article;
 }
@@ -472,6 +481,13 @@ async function launchElectronHost() {
   await runAction(async () => {
     const result = await platformApi.launchElectronHost();
     showToast(result.status === "running" ? "Desktop is already running." : "Desktop is launching.");
+  });
+}
+
+async function closeElectronHost() {
+  await runAction(async () => {
+    const result = await platformApi.closeElectronHost();
+    showToast(result.status === "stopped" ? "Desktop is not running." : "Desktop is closing.");
   });
 }
 

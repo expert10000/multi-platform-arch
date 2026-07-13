@@ -430,6 +430,12 @@ button.implementation-link {
   cursor: pointer;
 }
 
+.implementation-link.stop {
+  border-color: rgba(169, 63, 63, 0.28);
+  background: #fff1f1;
+  color: var(--danger);
+}
+
 .implementation-facts span {
   border-radius: 8px;
   padding: 5px 8px;

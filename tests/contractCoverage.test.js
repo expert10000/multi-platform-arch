@@ -39,6 +39,10 @@ test("backend covers every OpenAPI operation", async () => {
     coveredOperations.add("launchElectronHost");
     assert.equal(launch.host, "electron");
 
+    const close = await api.closeElectronHost();
+    coveredOperations.add("closeElectronHost");
+    assert.equal(close.host, "electron");
+
     const initialWorkspaces = await api.listWorkspaces();
     coveredOperations.add("listWorkspaces");
     assert.deepEqual(initialWorkspaces, []);

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import {
+  createElectronHostController,
   createElectronHostLauncher,
   createServer
 } from "../apps/backends/node/src/server.js";
@@ -108,21 +109,31 @@ test("node backend supports cross-origin preflight for separated hosts", async (
 
 test("launches the Electron host through a local runtime command", async () => {
   const launches = [];
+  const closes = [];
   const { server, baseUrl } = await startServer({
     launchElectronHost: async (input) => {
       launches.push(input);
       return { host: "electron", status: "starting", backendUrl: input.backendUrl };
+    },
+    closeElectronHost: async (input) => {
+      closes.push(input);
+      return { host: "electron", status: "stopping", backendUrl: input.backendUrl };
     }
   });
   const api = createPlatformApi({ baseUrl });
 
   try {
     const result = await api.launchElectronHost();
+    const close = await api.closeElectronHost();
 
     assert.equal(result.host, "electron");
     assert.equal(result.status, "starting");
     assert.equal(result.backendUrl, baseUrl);
+    assert.equal(close.host, "electron");
+    assert.equal(close.status, "stopping");
+    assert.equal(close.backendUrl, baseUrl);
     assert.deepEqual(launches, [{ backendUrl: baseUrl }]);
+    assert.deepEqual(closes, [{ backendUrl: baseUrl }]);
   } finally {
     server.close();
   }
@@ -196,6 +207,38 @@ test("electron launcher relaunches when the previous desktop process closed", as
   assert.equal(firstLaunch.status, "starting");
   assert.equal(secondLaunch.status, "starting");
   assert.equal(launches.length, 2);
+});
+
+test("electron controller stops a running desktop process", async () => {
+  const stops = [];
+  const controller = createElectronHostController({
+    hostRoot: process.platform === "win32" ? "C:\\host" : "/tmp/host",
+    fileExists: () => true,
+    spawnProcess: () => ({
+      exitCode: null,
+      signalCode: null,
+      pid: 123,
+      once() {
+        return undefined;
+      },
+      unref() {
+        return undefined;
+      }
+    }),
+    isProcessRunning: (childProcess) => Boolean(childProcess),
+    stopProcess: (childProcess) => {
+      stops.push(childProcess.pid);
+    }
+  });
+
+  const launch = await controller.launchElectronHost({ backendUrl: "http://localhost:3000" });
+  const close = await controller.closeElectronHost({ backendUrl: "http://localhost:3000" });
+  const secondClose = await controller.closeElectronHost({ backendUrl: "http://localhost:3000" });
+
+  assert.equal(launch.status, "starting");
+  assert.equal(close.status, "stopping");
+  assert.equal(secondClose.status, "stopped");
+  assert.deepEqual(stops, [123]);
 });
 
 async function startServer(options) {

@@ -40,7 +40,9 @@ test("central admin exposes hosts backends and workers panels", async () => {
   assert.match(appSource, /\.NET MAUI Host/);
   assert.match(appSource, /Electron Host/);
   assert.match(appSource, /Launch Desktop/);
+  assert.match(appSource, /Stop Desktop/);
   assert.match(appSource, /launchElectronHost/);
+  assert.match(appSource, /closeElectronHost/);
   assert.match(appSource, /Open Web Host/);
 });
 
