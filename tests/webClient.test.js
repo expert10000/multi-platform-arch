@@ -84,6 +84,7 @@ test("electron host exposes desktop workspace document and job surfaces", async 
   assert.match(mainSource, /preload\.cjs/);
   assert.match(mainSource, /requestSingleInstanceLock/);
   assert.match(mainSource, /second-instance/);
+  assert.match(mainSource, /if \(!mainWindow\) \{\s*createWindow\(\);/);
   assert.match(mainSource, /open-platform-browser/);
   assert.match(mainSource, /openExternal/);
   assert.match(preloadSource, /contextBridge/);

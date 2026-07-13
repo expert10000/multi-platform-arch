@@ -140,11 +140,16 @@ test("electron launcher starts the desktop executable without a shell", async ()
       return {
         exitCode: null,
         signalCode: null,
+        pid: launches.length,
+        once() {
+          return undefined;
+        },
         unref() {
           unrefCalled = true;
         }
       };
-    }
+    },
+    isProcessRunning: (childProcess) => Boolean(childProcess)
   });
 
   const firstLaunch = await launcher({ backendUrl: "http://localhost:3000" });
@@ -152,13 +157,45 @@ test("electron launcher starts the desktop executable without a shell", async ()
 
   assert.equal(firstLaunch.status, "starting");
   assert.equal(secondLaunch.status, "running");
-  assert.equal(launches.length, 1);
+  assert.equal(launches.length, 2);
   assert.match(launches[0].file, /electron(\.exe)?$/);
   assert.deepEqual(launches[0].args, [hostRoot]);
   assert.equal(launches[0].options.shell, false);
   assert.equal(launches[0].options.windowsHide, true);
   assert.equal(launches[0].options.env.DZONE_BACKEND_URL, "http://localhost:3000");
+  assert.match(launches[1].file, /electron(\.exe)?$/);
+  assert.deepEqual(launches[1].args, [hostRoot]);
   assert.equal(unrefCalled, true);
+});
+
+test("electron launcher relaunches when the previous desktop process closed", async () => {
+  const launches = [];
+  const runningStates = [false];
+  const launcher = createElectronHostLauncher({
+    hostRoot: process.platform === "win32" ? "C:\\host" : "/tmp/host",
+    fileExists: () => true,
+    spawnProcess: () => {
+      launches.push({});
+      return {
+        exitCode: null,
+        signalCode: null,
+        once() {
+          return undefined;
+        },
+        unref() {
+          return undefined;
+        }
+      };
+    },
+    isProcessRunning: () => runningStates.shift() ?? false
+  });
+
+  const firstLaunch = await launcher({ backendUrl: "http://localhost:3000" });
+  const secondLaunch = await launcher({ backendUrl: "http://localhost:3000" });
+
+  assert.equal(firstLaunch.status, "starting");
+  assert.equal(secondLaunch.status, "starting");
+  assert.equal(launches.length, 2);
 });
 
 async function startServer(options) {

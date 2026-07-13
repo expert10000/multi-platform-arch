@@ -53,6 +53,7 @@ if (!hasSingleInstanceLock) {
 } else {
   app.on("second-instance", () => {
     if (!mainWindow) {
+      createWindow();
       return;
     }
     if (mainWindow.isMinimized()) {

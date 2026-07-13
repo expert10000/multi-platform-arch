@@ -130,23 +130,23 @@ export function createServer(
 export function createElectronHostLauncher({
   hostRoot = electronHostRoot,
   fileExists = existsSync,
-  spawnProcess = spawn
+  spawnProcess = spawn,
+  isProcessRunning = isChildProcessRunning
 } = {}) {
   let hostProcess = null;
 
   return async function launchElectronHost({ backendUrl }) {
-    if (hostProcess && hostProcess.exitCode === null && hostProcess.signalCode === null) {
+    const command = electronLaunchCommand(hostRoot, fileExists);
+
+    if (isProcessRunning(hostProcess)) {
+      focusElectronHost(command, hostRoot, backendUrl, spawnProcess);
       return { host: "electron", status: "running", backendUrl };
     }
+    hostProcess = null;
 
-    const command = electronLaunchCommand(hostRoot, fileExists);
-    hostProcess = spawnProcess(command.file, command.args, {
-      cwd: hostRoot,
-      detached: true,
-      env: { ...process.env, DZONE_BACKEND_URL: backendUrl },
-      shell: false,
-      stdio: "ignore",
-      windowsHide: true
+    hostProcess = spawnElectronHost(command, hostRoot, backendUrl, spawnProcess);
+    hostProcess.once?.("exit", () => {
+      hostProcess = null;
     });
     hostProcess.unref();
 
@@ -167,6 +167,38 @@ function electronLaunchCommand(hostRoot, fileExists) {
   return process.platform === "win32"
     ? { file: "cmd.exe", args: ["/d", "/s", "/c", "npm start"] }
     : { file: "npm", args: ["start"] };
+}
+
+function focusElectronHost(command, hostRoot, backendUrl, spawnProcess) {
+  const focusProcess = spawnElectronHost(command, hostRoot, backendUrl, spawnProcess);
+  focusProcess.unref();
+}
+
+function spawnElectronHost(command, hostRoot, backendUrl, spawnProcess) {
+  return spawnProcess(command.file, command.args, {
+    cwd: hostRoot,
+    detached: true,
+    env: { ...process.env, DZONE_BACKEND_URL: backendUrl },
+    shell: false,
+    stdio: "ignore",
+    windowsHide: true
+  });
+}
+
+function isChildProcessRunning(childProcess) {
+  if (!childProcess || childProcess.exitCode !== null || childProcess.signalCode !== null) {
+    return false;
+  }
+  if (!childProcess.pid) {
+    return true;
+  }
+
+  try {
+    process.kill(childProcess.pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function isStaticRequest(path) {
