@@ -12,7 +12,14 @@
         <p class="eyebrow">Electron Host</p>
         <h1>Desktop Workspace</h1>
       </div>
-      <div class="backend-chip" id="backendStatus">Checking backend</div>
+      <form class="backend-control" id="backendForm">
+        <label>
+          Backend
+          <input id="backendUrlInput" name="backendUrl" required spellcheck="false">
+        </label>
+        <button type="submit">Connect</button>
+        <div class="backend-chip" id="backendStatus">Checking backend</div>
+      </form>
     </header>
 
     <main class="desktop-shell">
@@ -57,7 +64,7 @@
             </label>
             <label>
               Tags
-              <input id="documentTags" name="tags" autocomplete="off" placeholder="desktop, offline">
+              <input id="documentTags" name="tags" autocomplete="off" placeholder="desktop, review">
             </label>
             <button type="submit">Add Document</button>
           </form>

@@ -41,6 +41,21 @@ button,
   background: #fff;
 }
 
+.backend-control {
+  display: grid;
+  grid-template-columns: minmax(250px, 360px) auto auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.backend-control label {
+  min-width: 0;
+}
+
+.backend-control input {
+  width: 100%;
+}
+
 .eyebrow {
   margin: 0 0 4px;
   color: var(--muted);
@@ -69,6 +84,9 @@ h3 {
 }
 
 .backend-chip {
+  min-height: 40px;
+  display: inline-grid;
+  place-items: center;
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 8px 10px;
@@ -76,6 +94,12 @@ h3 {
   color: var(--accent);
   font-size: 13px;
   font-weight: 850;
+  white-space: nowrap;
+}
+
+.backend-chip.offline {
+  background: #fff2e7;
+  color: #925100;
 }
 
 .desktop-shell {
@@ -314,6 +338,7 @@ button[type="submit"] {
 
 @media (max-width: 1040px) {
   .desktop-shell,
+  .backend-control,
   .document-form,
   .document-row {
     grid-template-columns: 1fr;

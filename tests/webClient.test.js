@@ -39,7 +39,7 @@ test("central admin exposes hosts backends and workers panels", async () => {
   assert.match(appSource, /Python Backend/);
   assert.match(appSource, /\.NET MAUI Host/);
   assert.match(appSource, /Electron Host/);
-  assert.match(appSource, /Open Electron Host/);
+  assert.match(appSource, /View Desktop Source/);
   assert.match(appSource, /Open Web Host/);
 });
 
@@ -62,12 +62,17 @@ test("electron host exposes desktop workspace document and job surfaces", async 
   const mainSource = await readFile(new URL("../apps/hosts/electron/main.cjs", import.meta.url), "utf8");
 
   assert.match(html, /Desktop Workspace/);
+  assert.match(html, /backendUrlInput/);
   assert.match(html, /Workspaces/);
   assert.match(html, /Documents/);
   assert.match(html, /Jobs/);
   assert.match(rendererSource, /createPlatformApi/);
+  assert.match(rendererSource, /localStorage/);
+  assert.match(rendererSource, /connectBackend/);
   assert.match(rendererSource, /renderWorkspaces/);
   assert.match(rendererSource, /renderDocuments/);
   assert.match(rendererSource, /renderJobs/);
+  assert.match(rendererSource, /uploadDocumentFile/);
+  assert.match(rendererSource, /processDocument/);
   assert.match(mainSource, /DZONE_BACKEND_URL/);
 });

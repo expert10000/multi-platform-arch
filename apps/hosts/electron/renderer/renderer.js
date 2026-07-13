@@ -1,8 +1,9 @@
 import { createPlatformApi } from "../../shared/public/apiClient.js";
 
+const backendStorageKey = "dzoneElectronBackendUrl";
 const query = new URLSearchParams(window.location.search);
-const backendUrl = query.get("backendUrl") || "http://localhost:3000";
-const platformApi = createPlatformApi({ baseUrl: backendUrl });
+let backendUrl = localStorage.getItem(backendStorageKey) || query.get("backendUrl") || "http://localhost:3000";
+let platformApi = createPlatformApi({ baseUrl: backendUrl });
 
 const state = {
   workspaces: [],
@@ -13,6 +14,8 @@ const state = {
 
 const elements = {
   backendStatus: document.querySelector("#backendStatus"),
+  backendForm: document.querySelector("#backendForm"),
+  backendUrlInput: document.querySelector("#backendUrlInput"),
   workspaceForm: document.querySelector("#workspaceForm"),
   workspaceName: document.querySelector("#workspaceName"),
   workspaceCount: document.querySelector("#workspaceCount"),
@@ -31,6 +34,13 @@ const elements = {
   refreshButton: document.querySelector("#refreshButton"),
   toast: document.querySelector("#toast")
 };
+
+elements.backendUrlInput.value = backendUrl;
+
+elements.backendForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await runAction(() => connectBackend(new FormData(elements.backendForm)));
+});
 
 elements.workspaceForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -66,12 +76,27 @@ async function initialize() {
   render();
 }
 
+async function connectBackend(formData) {
+  backendUrl = normalizeBackendUrl(formData.get("backendUrl"));
+  localStorage.setItem(backendStorageKey, backendUrl);
+  elements.backendUrlInput.value = backendUrl;
+  platformApi = createPlatformApi({ baseUrl: backendUrl });
+  state.workspaces = [];
+  state.documents = [];
+  state.jobs = [];
+  state.activeWorkspaceId = null;
+  await initialize();
+  showToast("Desktop host connected.");
+}
+
 async function loadHealth() {
   try {
     const health = await platformApi.getHealth();
     elements.backendStatus.textContent = `${health.runtime} backend`;
+    elements.backendStatus.classList.remove("offline");
   } catch {
     elements.backendStatus.textContent = "backend offline";
+    elements.backendStatus.classList.add("offline");
   }
 }
 
@@ -292,6 +317,14 @@ function parseTags(value) {
     .split(",")
     .map((tag) => tag.trim())
     .filter(Boolean);
+}
+
+function normalizeBackendUrl(value) {
+  const url = String(value ?? "").trim();
+  if (!url) {
+    return "http://localhost:3000";
+  }
+  return url.replace(/\/+$/, "");
 }
 
 function formatBytes(size) {
