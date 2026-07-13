@@ -18,8 +18,12 @@ export const apiOperations = Object.freeze({
   closeDotnetDesktopHost: "POST /runtime/hosts/dotnet-desktop/close",
   launchMauiHost: "POST /runtime/hosts/maui/open",
   closeMauiHost: "POST /runtime/hosts/maui/close",
+  launchSpringBackend: "POST /runtime/backends/spring/open",
+  closeSpringBackend: "POST /runtime/backends/spring/close",
   setupMauiHost: "POST /runtime/hosts/maui/setup",
-  getMauiSetupStatus: "GET /runtime/hosts/maui/setup"
+  getMauiSetupStatus: "GET /runtime/hosts/maui/setup",
+  setupSpringBackend: "POST /runtime/backends/spring/setup",
+  getSpringSetupStatus: "GET /runtime/backends/spring/setup"
 });
 
 export const platformApi = createPlatformApi();
@@ -129,6 +133,18 @@ export function createPlatformApi({ baseUrl = "" } = {}) {
       });
     },
 
+    launchSpringBackend() {
+      return request(baseUrl, "/runtime/backends/spring/open", {
+        method: "POST"
+      });
+    },
+
+    closeSpringBackend() {
+      return request(baseUrl, "/runtime/backends/spring/close", {
+        method: "POST"
+      });
+    },
+
     setupMauiHost() {
       return request(baseUrl, "/runtime/hosts/maui/setup", {
         method: "POST"
@@ -137,6 +153,16 @@ export function createPlatformApi({ baseUrl = "" } = {}) {
 
     getMauiSetupStatus() {
       return request(baseUrl, "/runtime/hosts/maui/setup");
+    },
+
+    setupSpringBackend() {
+      return request(baseUrl, "/runtime/backends/spring/setup", {
+        method: "POST"
+      });
+    },
+
+    getSpringSetupStatus() {
+      return request(baseUrl, "/runtime/backends/spring/setup");
     }
   };
 }

@@ -36,6 +36,16 @@ test("central admin exposes hosts backends and workers panels", async () => {
 
   assert.match(html, /Central Admin Console/);
   assert.match(appSource, /Node Backend/);
+  assert.match(appSource, /Spring Boot Backend/);
+  assert.match(appSource, /Start Spring Admin/);
+  assert.match(appSource, /Open Spring Admin/);
+  assert.match(appSource, /Stop Spring/);
+  assert.match(appSource, /Install Java \/ Maven/);
+  assert.match(appSource, /launchSpringBackend/);
+  assert.match(appSource, /closeSpringBackend/);
+  assert.match(appSource, /setupSpringBackend/);
+  assert.match(appSource, /getSpringSetupStatus/);
+  assert.match(appSource, /Show installer log/);
   assert.match(appSource, /Python Backend/);
   assert.match(appSource, /\.NET Desktop Host/);
   assert.match(appSource, /Launch \.NET Desktop/);

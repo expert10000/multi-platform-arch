@@ -412,6 +412,21 @@ button:focus-visible {
   color: #8a5b00;
 }
 
+.runtime-badge.missing {
+  background: #fff1f1;
+  color: var(--danger);
+}
+
+.runtime-badge.installing {
+  background: #fff5df;
+  color: #8a5b00;
+}
+
+.runtime-badge.starting {
+  background: #fff5df;
+  color: #8a5b00;
+}
+
 .implementation-facts {
   display: flex;
   flex-wrap: wrap;
@@ -466,9 +481,25 @@ button.implementation-link {
   overflow-wrap: anywhere;
 }
 
+.setup-log {
+  display: grid;
+  gap: 7px;
+}
+
+.setup-log summary {
+  cursor: pointer;
+  color: var(--ink);
+  font-weight: 850;
+}
+
+.setup-log-path {
+  display: block;
+  color: var(--muted);
+}
+
 .setup-status pre {
   max-height: 320px;
-  min-height: 180px;
+  min-height: 140px;
   overflow: auto;
   margin: 0;
   border-radius: 6px;

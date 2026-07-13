@@ -59,6 +59,14 @@ test("backend covers every OpenAPI operation", async () => {
     coveredOperations.add("closeMauiHost");
     assert.equal(mauiClose.host, "maui-desktop");
 
+    const springLaunch = await api.launchSpringBackend();
+    coveredOperations.add("launchSpringBackend");
+    assert.equal(springLaunch.host, "spring-backend");
+
+    const springClose = await api.closeSpringBackend();
+    coveredOperations.add("closeSpringBackend");
+    assert.equal(springClose.host, "spring-backend");
+
     const mauiSetup = await api.setupMauiHost();
     coveredOperations.add("setupMauiHost");
     assert.equal(mauiSetup.host, "maui");
@@ -66,6 +74,14 @@ test("backend covers every OpenAPI operation", async () => {
     const mauiSetupStatus = await api.getMauiSetupStatus();
     coveredOperations.add("getMauiSetupStatus");
     assert.equal(mauiSetupStatus.host, "maui");
+
+    const springSetup = await api.setupSpringBackend();
+    coveredOperations.add("setupSpringBackend");
+    assert.equal(springSetup.host, "spring");
+
+    const springSetupStatus = await api.getSpringSetupStatus();
+    coveredOperations.add("getSpringSetupStatus");
+    assert.equal(springSetupStatus.host, "spring");
 
     const initialWorkspaces = await api.listWorkspaces();
     coveredOperations.add("listWorkspaces");
@@ -216,6 +232,16 @@ async function startServer(options) {
       status: "stopping",
       backendUrl
     }),
+    launchSpringBackend: async ({ backendUrl }) => ({
+      host: "spring-backend",
+      status: "starting",
+      backendUrl
+    }),
+    closeSpringBackend: async ({ backendUrl }) => ({
+      host: "spring-backend",
+      status: "stopping",
+      backendUrl
+    }),
     setupMauiHost: async () => ({
       host: "maui",
       status: "starting",
@@ -225,6 +251,24 @@ async function startServer(options) {
       host: "maui",
       status: "idle",
       command: "dotnet workload install maui",
+      lastOutput: ""
+    }),
+    setupSpringBackend: async () => ({
+      host: "spring",
+      status: "starting",
+      command: "winget install Microsoft.OpenJDK.17 and Apache.Maven",
+      java: "missing",
+      maven: "missing",
+      spring: "stopped",
+      lastOutput: ""
+    }),
+    getSpringSetupStatus: async () => ({
+      host: "spring",
+      status: "idle",
+      command: "winget install Microsoft.OpenJDK.17 and Apache.Maven",
+      java: "missing",
+      maven: "missing",
+      spring: "stopped",
       lastOutput: ""
     })
   });

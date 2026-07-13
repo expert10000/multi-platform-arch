@@ -9,6 +9,8 @@ import {
   createDotnetDesktopHostController,
   createMauiHostController,
   createMauiSetupRunner,
+  createSpringBackendController,
+  createSpringSetupRunner,
   createServer
 } from "../apps/backends/node/src/server.js";
 import { createPlatformApi } from "../apps/hosts/shared/public/apiClient.js";
@@ -200,6 +202,79 @@ test("runs optional MAUI setup through the backend", async () => {
     assert.equal(result.command, "dotnet workload install maui");
     assert.equal(status.status, "idle");
     assert.equal(setups.length, 1);
+  } finally {
+    server.close();
+  }
+});
+
+test("reports and runs Spring backend setup through the backend", async () => {
+  const setups = [];
+  const { server, baseUrl } = await startServer({
+    setupSpringBackend: async () => {
+      setups.push({});
+      return {
+        host: "spring",
+        status: "starting",
+        command: "winget install Microsoft.OpenJDK.17 and Apache.Maven",
+        java: "missing",
+        maven: "missing",
+        spring: "stopped",
+        lastOutput: ""
+      };
+    },
+    getSpringSetupStatus: async () => ({
+      host: "spring",
+      status: "idle",
+      command: "winget install Microsoft.OpenJDK.17 and Apache.Maven",
+      java: "missing",
+      maven: "missing",
+      spring: "stopped",
+      lastOutput: ""
+    })
+  });
+  const api = createPlatformApi({ baseUrl });
+
+  try {
+    const result = await api.setupSpringBackend();
+    const status = await api.getSpringSetupStatus();
+
+    assert.equal(result.host, "spring");
+    assert.equal(result.status, "starting");
+    assert.equal(status.maven, "missing");
+    assert.equal(status.spring, "stopped");
+    assert.equal(setups.length, 1);
+  } finally {
+    server.close();
+  }
+});
+
+test("launches the Spring backend through a local runtime command", async () => {
+  const launches = [];
+  const closes = [];
+  const { server, baseUrl } = await startServer({
+    launchSpringBackend: async (input) => {
+      launches.push(input);
+      return { host: "spring-backend", status: "starting", backendUrl: input.backendUrl };
+    },
+    closeSpringBackend: async (input) => {
+      closes.push(input);
+      return { host: "spring-backend", status: "stopping", backendUrl: input.backendUrl };
+    }
+  });
+  const api = createPlatformApi({ baseUrl });
+
+  try {
+    const result = await api.launchSpringBackend();
+    const close = await api.closeSpringBackend();
+
+    assert.equal(result.host, "spring-backend");
+    assert.equal(result.status, "starting");
+    assert.equal(result.backendUrl, "http://localhost:3200");
+    assert.equal(close.host, "spring-backend");
+    assert.equal(close.status, "stopping");
+    assert.equal(close.backendUrl, "http://localhost:3200");
+    assert.deepEqual(launches, [{ backendUrl: "http://localhost:3200" }]);
+    assert.deepEqual(closes, [{ backendUrl: "http://localhost:3200" }]);
   } finally {
     server.close();
   }
@@ -460,6 +535,94 @@ test("MAUI setup runner starts the installer once in the background", async () =
   } finally {
     await rm(setupRoot, { recursive: true, force: true });
   }
+});
+
+test("Spring setup runner reports tool state and starts installer once", async () => {
+  const setupRoot = await mkdtemp(join(tmpdir(), "dzone-spring-setup-"));
+  const launches = [];
+  const runner = createSpringSetupRunner({
+    scriptPath: join(setupRoot, "install-spring-tooling.ps1"),
+    workingDirectory: setupRoot,
+    logPath: join(setupRoot, "spring-setup.log"),
+    spawnProcess: (file, args, options) => {
+      launches.push({ file, args, options });
+      return {
+        exitCode: null,
+        signalCode: null,
+        pid: 987,
+        once() {
+          return undefined;
+        }
+      };
+    },
+    isProcessRunning: (childProcess) => Boolean(childProcess),
+    checkCommand: async (name) => (name === "mvn" ? "missing" : "installed"),
+    checkSpringRuntime: async () => "stopped"
+  });
+
+  try {
+    const firstSetup = await runner();
+    const secondSetup = await runner();
+    const status = await runner.status();
+
+    assert.equal(firstSetup.status, "starting");
+    assert.equal(secondSetup.status, "running");
+    assert.equal(status.java, "installed");
+    assert.equal(status.maven, "missing");
+    assert.equal(status.spring, "stopped");
+    assert.equal(launches.length, 1);
+    assert.match(launches[0].file, process.platform === "win32" ? /powershell\.exe$/ : /pwsh$/);
+    assert.deepEqual(launches[0].args.slice(0, 3), ["-NoProfile", "-ExecutionPolicy", "Bypass"]);
+    assert.equal(launches[0].args[3], "-File");
+    assert.match(launches[0].args[4], /install-spring-tooling\.ps1$/);
+    assert.equal(launches[0].options.detached, false);
+    assert.equal(launches[0].options.shell, false);
+    assert.deepEqual(launches[0].options.stdio, ["ignore", "pipe", "pipe"]);
+    assert.equal(launches[0].options.windowsHide, true);
+  } finally {
+    await rm(setupRoot, { recursive: true, force: true });
+  }
+});
+
+test("Spring backend controller starts and stops Maven runtime", async () => {
+  const launches = [];
+  const stops = [];
+  const controller = createSpringBackendController({
+    workingDirectory: process.platform === "win32" ? "C:\\repo" : "/tmp/repo",
+    spawnProcess: (file, args, options) => {
+      launches.push({ file, args, options });
+      return {
+        exitCode: null,
+        signalCode: null,
+        pid: 321,
+        once() {
+          return undefined;
+        },
+        unref() {
+          return undefined;
+        }
+      };
+    },
+    isProcessRunning: (childProcess) => Boolean(childProcess),
+    stopProcess: (childProcess) => {
+      stops.push(childProcess.pid);
+    },
+    checkSpringRuntime: async () => "stopped"
+  });
+
+  const launch = await controller.launchSpringBackend({ backendUrl: "http://localhost:3200" });
+  const secondLaunch = await controller.launchSpringBackend({ backendUrl: "http://localhost:3200" });
+  const close = await controller.closeSpringBackend({ backendUrl: "http://localhost:3200" });
+  const secondClose = await controller.closeSpringBackend({ backendUrl: "http://localhost:3200" });
+
+  assert.equal(launch.status, "starting");
+  assert.equal(secondLaunch.status, "running");
+  assert.equal(close.status, "stopping");
+  assert.equal(secondClose.status, "stopped");
+  assert.equal(launches.length, 1);
+  assert.equal(launches[0].options.env.SERVER_PORT, "3200");
+  assert.equal(launches[0].options.windowsHide, process.platform === "win32");
+  assert.deepEqual(stops, [321]);
 });
 
 async function startServer(options) {

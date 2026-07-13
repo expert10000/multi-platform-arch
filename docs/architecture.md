@@ -10,6 +10,7 @@ The template has been translated into a small working platform starter. The impl
 - job execution lives in `packages/platform/src/workers/jobWorker.js`
 - HTTP transport lives in `apps/backends/node/src/server.js`
 - Python HTTP transport lives in `apps/backends/python/app.py`
+- Spring Boot HTTP transport lives in `apps/backends/spring`
 - the central admin host lives in `apps/hosts/admin/public`
 - the web workspace host lives in `apps/hosts/web/public`
 - the Electron desktop host lives in `apps/hosts/electron`
@@ -35,7 +36,11 @@ The included Node backend is intentionally small and dependency-free. It demonst
 
 The Python backend demonstrates backend interchangeability. It implements the same route surface with Python's standard library, keeps metadata in memory, and stores uploaded files under `data/python-files/`. The web host can use the same API client against either backend URL.
 
-Both HTTP backends support cross-origin requests so hosts can run separately from backend runtimes.
+The Spring Boot backend implements the same route surface for JVM/server deployments. It serves the same admin and web hosts, supports uploads, runs the job lifecycle, and exposes the desktop host control routes. Its default port is `3200`, so it can run beside the Node dashboard during migration.
+
+All HTTP backends support cross-origin requests so hosts can run separately from backend runtimes.
+
+For backend placement, use Node as the local/default backend for desktop-centric workflows and Spring Boot as the shared/server backend. Keep both available to hosts through `DZONE_BACKEND_URL` instead of assigning backend choice by host type.
 
 The backend starts a local job worker. The worker polls queued jobs from the repository, marks each job `running`, executes the handler for the job type, then marks the job `completed` or `failed`. Because queued jobs are read from the repository, jobs remain recoverable after a process restart.
 

@@ -76,6 +76,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RuntimeHostLaunchResult"
+  /runtime/backends/spring/open:
+    post:
+      operationId: launchSpringBackend
+      responses:
+        "202":
+          description: Spring Boot backend launch requested.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeHostLaunchResult"
+  /runtime/backends/spring/close:
+    post:
+      operationId: closeSpringBackend
+      responses:
+        "202":
+          description: Spring Boot backend close requested.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeHostLaunchResult"
   /runtime/hosts/maui/setup:
     get:
       operationId: getMauiSetupStatus
@@ -91,6 +111,25 @@ paths:
       responses:
         "202":
           description: Optional .NET MAUI workload setup requested.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeHostSetupResult"
+  /runtime/backends/spring/setup:
+    get:
+      operationId: getSpringSetupStatus
+      responses:
+        "200":
+          description: Spring Boot prerequisite setup status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeHostSetupResult"
+    post:
+      operationId: setupSpringBackend
+      responses:
+        "202":
+          description: Spring Boot prerequisite setup requested.
           content:
             application/json:
               schema:
@@ -441,7 +480,7 @@ components:
       properties:
         host:
           type: string
-          enum: [electron, dotnet-desktop, maui-desktop]
+          enum: [electron, dotnet-desktop, maui-desktop, spring-backend]
         status:
           type: string
           enum: [starting, running, stopping, stopped]
@@ -453,7 +492,7 @@ components:
       properties:
         host:
           type: string
-          enum: [maui]
+          enum: [maui, spring]
         status:
           type: string
           enum: [idle, starting, running, completed, failed]
@@ -470,4 +509,10 @@ components:
         signal:
           type: [string, "null"]
         lastOutput:
+          type: string
+        java:
+          type: string
+        maven:
+          type: string
+        spring:
           type: string

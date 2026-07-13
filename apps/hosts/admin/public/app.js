@@ -5,6 +5,7 @@ const state = {
   documents: [],
   jobs: [],
   mauiSetup: null,
+  springSetup: null,
   runtimeName: "unknown",
   activeWorkspaceId: null,
   activeArchitectureSection: "models",
@@ -112,6 +113,9 @@ window.setInterval(() => {
     if (isMauiSetupActive()) {
       await loadMauiSetupStatus();
     }
+    if (isSpringSetupActive()) {
+      await loadSpringSetupStatus();
+    }
     if (state.activeWorkspaceId) {
       await refreshActiveWorkspace();
     }
@@ -122,6 +126,7 @@ window.setInterval(() => {
 async function initialize() {
   await loadHealth();
   await loadMauiSetupStatus();
+  await loadSpringSetupStatus();
   await loadWorkspaces();
   setDocumentFormEnabled(false);
   render();
@@ -148,6 +153,10 @@ async function loadWorkspaces() {
 
 async function loadMauiSetupStatus() {
   state.mauiSetup = await platformApi.getMauiSetupStatus().catch(() => null);
+}
+
+async function loadSpringSetupStatus() {
+  state.springSetup = await platformApi.getSpringSetupStatus().catch(() => null);
 }
 
 async function refreshActiveWorkspace() {
@@ -402,12 +411,29 @@ function implementationSections(metrics) {
       {
         name: "Node Backend",
         status: state.runtimeName === "node" ? "Running" : "Available",
-        summary: "Primary backend implementation with SQLite metadata, local file storage, and worker startup.",
+        summary: "Default local backend for the dashboard, SQLite metadata, local file storage, worker startup, and desktop launcher control.",
         facts: [
           `${metrics.uploadedFiles} files ingested`,
           `${metrics.completedJobs} completed jobs`,
           `${metrics.failedJobs} failed jobs`
         ]
+      },
+      {
+        name: "Spring Boot Backend",
+        status: springBackendStatus(),
+        summary: "Enterprise/server backend option that implements the same OpenAPI routes and serves the same hosts.",
+        href: springAdminHref(),
+        command: "launchSpringBackend",
+        stopCommand: "closeSpringBackend",
+        setupCommand: "setupSpringBackend",
+        statusCommand: "getSpringSetupStatus",
+        statusView: "springSetup",
+        infoCommand: "showSpringInstallMessage",
+        action: "Start Spring Admin",
+        stopAction: "Stop Spring",
+        setupAction: "Install Java / Maven",
+        hrefAction: "Open Spring Admin",
+        facts: springBackendFacts()
       },
       {
         name: "Python Backend",
@@ -418,7 +444,7 @@ function implementationSections(metrics) {
       {
         name: "Future Backends",
         status: "Planned",
-        summary: "ASP.NET Core, Spring Boot, FastAPI, and Go can implement the same OpenAPI surface.",
+        summary: "ASP.NET Core, FastAPI, and Go can implement the same OpenAPI surface without host rewrites.",
         facts: ["Same contracts", "Own persistence choices", "No host rewrite required"]
       }
     ],
@@ -483,10 +509,10 @@ function implementationCard(implementation) {
     link.href = implementation.href;
     link.target = "_blank";
     link.rel = "noreferrer";
-    link.textContent = implementation.action ?? "Open";
+    link.textContent = implementation.hrefAction ?? implementation.action ?? "Open";
     article.append(link);
   }
-  if (implementation.command) {
+  if (implementation.command && shouldShowLaunchCommand(implementation)) {
     const button = document.createElement("button");
     button.className = "implementation-link";
     button.type = "button";
@@ -494,15 +520,15 @@ function implementationCard(implementation) {
     button.addEventListener("click", () => launchHost(implementation.command));
     article.append(button);
   }
-  if (implementation.stopCommand) {
+  if (implementation.stopCommand && shouldShowStopCommand(implementation)) {
     const button = document.createElement("button");
     button.className = "implementation-link stop";
     button.type = "button";
-    button.textContent = stopLabelFor(implementation.command);
+    button.textContent = implementation.stopAction ?? stopLabelFor(implementation.command);
     button.addEventListener("click", () => closeHost(implementation.stopCommand));
     article.append(button);
   }
-  if (implementation.setupCommand) {
+  if (implementation.setupCommand && shouldShowSetupCommand(implementation)) {
     const button = document.createElement("button");
     button.className = "implementation-link";
     button.type = "button";
@@ -526,24 +552,53 @@ function implementationCard(implementation) {
     button.addEventListener("click", showMauiInstallMessage);
     article.append(button);
   }
+  if (implementation.infoCommand === "showSpringInstallMessage") {
+    const button = document.createElement("button");
+    button.className = "implementation-link";
+    button.type = "button";
+    button.textContent = "Setup Command";
+    button.addEventListener("click", showSpringInstallMessage);
+    article.append(button);
+  }
   if (implementation.statusView === "mauiSetup") {
-    article.append(mauiSetupStatusPanel());
+    article.append(setupStatusPanel("mauiSetup"));
+  }
+  if (implementation.statusView === "springSetup") {
+    article.append(setupStatusPanel("springSetup"));
   }
   article.append(facts);
   return article;
 }
 
 function shouldExpandImplementationCard(implementation) {
-  return implementation.statusView === "mauiSetup" && isMauiSetupActive();
+  return false;
 }
 
 function isMauiSetupActive() {
   return state.mauiSetup?.status === "starting" || state.mauiSetup?.status === "running";
 }
 
+function isSpringSetupActive() {
+  return state.springSetup?.status === "starting" ||
+    state.springSetup?.status === "running" ||
+    state.springSetup?.spring === "starting";
+}
+
 async function launchHost(command) {
   await runAction(async () => {
     const result = await platformApi[command]();
+    if (result.host === "spring-backend") {
+      await loadSpringSetupStatus();
+      if (result.status === "starting") {
+        state.springSetup = {
+          ...(state.springSetup ?? {}),
+          host: "spring",
+          status: "completed",
+          spring: "starting"
+        };
+      }
+      renderImplementations();
+    }
     showToast(result.status === "running" ? `${hostLabel(result.host)} is already running.` : `${hostLabel(result.host)} is launching.`);
   });
 }
@@ -551,6 +606,10 @@ async function launchHost(command) {
 async function closeHost(command) {
   await runAction(async () => {
     const result = await platformApi[command]();
+    if (result.host === "spring-backend") {
+      await loadSpringSetupStatus();
+      renderImplementations();
+    }
     showToast(result.status === "stopped" ? `${hostLabel(result.host)} is not running.` : `${hostLabel(result.host)} is closing.`);
   });
 }
@@ -558,7 +617,7 @@ async function closeHost(command) {
 async function setupHost(command) {
   await runAction(async () => {
     const result = await platformApi[command]();
-    state.mauiSetup = result;
+    setSetupState(result);
     renderImplementations();
     showToast(result.status === "running" ? `${hostLabel(result.host)} is already running.` : `${hostLabel(result.host)} installer started.`);
   });
@@ -566,10 +625,19 @@ async function setupHost(command) {
 
 async function refreshSetupStatus(command) {
   await runAction(async () => {
-    state.mauiSetup = await platformApi[command]();
+    setSetupState(await platformApi[command]());
     renderImplementations();
-    showToast(`${hostLabel(state.mauiSetup.host)} setup is ${state.mauiSetup.status}.`);
+    const setup = setupStateForHost(command.includes("Spring") ? "spring" : "maui");
+    showToast(`${hostLabel(setup.host)} setup is ${setup.status}.`);
   });
+}
+
+function setSetupState(result) {
+  if (result.host === "spring") {
+    state.springSetup = result;
+    return;
+  }
+  state.mauiSetup = result;
 }
 
 function hostLabel(host) {
@@ -581,6 +649,12 @@ function hostLabel(host) {
   }
   if (host === "maui") {
     return ".NET MAUI";
+  }
+  if (host === "spring") {
+    return "Spring Boot";
+  }
+  if (host === "spring-backend") {
+    return "Spring Boot";
   }
   return "Desktop";
 }
@@ -599,38 +673,80 @@ function showMauiInstallMessage() {
   showToast("Optional setup runs: dotnet workload install maui");
 }
 
-function mauiSetupStatusPanel() {
+function showSpringInstallMessage() {
+  showToast("Spring setup installs Java 17 and Maven with winget when missing.");
+}
+
+function shouldShowSetupCommand(implementation) {
+  if (implementation.statusView !== "springSetup") {
+    return true;
+  }
+  return !springPrerequisitesInstalled();
+}
+
+function shouldShowLaunchCommand(implementation) {
+  if (implementation.statusView !== "springSetup") {
+    return true;
+  }
+  return springPrerequisitesInstalled() && state.springSetup?.spring !== "running";
+}
+
+function shouldShowStopCommand(implementation) {
+  if (implementation.statusView !== "springSetup") {
+    return true;
+  }
+  return state.springSetup?.spring === "running";
+}
+
+function setupStatusPanel(statusView) {
+  const setup = setupStateForView(statusView);
   const panel = document.createElement("div");
   panel.className = "setup-status";
 
   const status = document.createElement("span");
   status.className = "setup-status-label";
-  status.textContent = `Setup: ${state.mauiSetup?.status ?? "unknown"}`;
+  status.textContent = `Setup: ${setup?.status ?? "unknown"}`;
 
   const command = document.createElement("span");
-  command.textContent = `Command: ${state.mauiSetup?.command ?? "dotnet workload install maui"}`;
+  command.textContent = `Command: ${setup?.command ?? defaultSetupCommand(statusView)}`;
 
-  panel.append(status, command, ...mauiSetupDetails());
+  panel.append(status, command, ...setupDetails(setup));
 
-  if (state.mauiSetup?.lastOutput) {
-    const output = document.createElement("pre");
-    output.textContent = state.mauiSetup.lastOutput;
-    panel.append(output);
+  if (setup?.logPath || setup?.lastOutput) {
+    const details = document.createElement("details");
+    details.className = "setup-log";
+    const summary = document.createElement("summary");
+    summary.textContent = "Show installer log";
+    details.append(summary);
+    if (setup.logPath) {
+      const logPath = document.createElement("span");
+      logPath.className = "setup-log-path";
+      logPath.textContent = `Path: ${setup.logPath}`;
+      details.append(logPath);
+    }
+    if (setup.lastOutput) {
+      const output = document.createElement("pre");
+      output.textContent = setup.lastOutput;
+      details.append(output);
+    }
+    panel.append(details);
   }
 
   return panel;
 }
 
-function mauiSetupDetails() {
-  if (!state.mauiSetup) {
+function setupDetails(setup) {
+  if (!setup) {
     return [];
   }
 
   const details = [
-    ["Started", state.mauiSetup.startedAt],
-    ["Finished", state.mauiSetup.finishedAt],
-    ["Exit", state.mauiSetup.exitCode === null || state.mauiSetup.exitCode === undefined ? null : String(state.mauiSetup.exitCode)],
-    ["Log", state.mauiSetup.logPath]
+    ["Java", setup.java],
+    ["Maven", setup.maven],
+    ["Spring", setup.spring],
+    ["Started", setup.startedAt],
+    ["Finished", setup.finishedAt],
+    ["Exit", setup.exitCode === null || setup.exitCode === undefined ? null : String(setup.exitCode)]
   ];
 
   return details
@@ -640,6 +756,58 @@ function mauiSetupDetails() {
       item.textContent = `${label}: ${value}`;
       return item;
     });
+}
+
+function setupStateForView(statusView) {
+  return statusView === "springSetup" ? state.springSetup : state.mauiSetup;
+}
+
+function setupStateForHost(host) {
+  return host === "spring" ? state.springSetup : state.mauiSetup;
+}
+
+function defaultSetupCommand(statusView) {
+  return statusView === "springSetup"
+    ? "winget install Microsoft.OpenJDK.17 and Apache.Maven"
+    : "dotnet workload install maui";
+}
+
+function springBackendStatus() {
+  if (state.runtimeName === "spring-boot" || state.springSetup?.spring === "running") {
+    return "Running";
+  }
+  if (state.springSetup?.spring === "starting") {
+    return "Starting";
+  }
+  if (isSpringSetupActive()) {
+    return "Installing";
+  }
+  if (state.springSetup?.java === "installed" && state.springSetup?.maven === "installed") {
+    return "Available";
+  }
+  return "Missing";
+}
+
+function springPrerequisitesInstalled() {
+  return state.springSetup?.java === "installed" && state.springSetup?.maven === "installed";
+}
+
+function springAdminHref() {
+  return state.springSetup?.spring === "running" || state.runtimeName === "spring-boot"
+    ? "http://localhost:3200/"
+    : null;
+}
+
+function springBackendFacts() {
+  const java = state.springSetup?.java ?? "unknown";
+  const maven = state.springSetup?.maven ?? "unknown";
+  const spring = state.springSetup?.spring ?? "unknown";
+  return [
+    `Java: ${java}`,
+    `Maven: ${maven}`,
+    `Spring: ${spring}`,
+    spring === "running" ? "Admin: http://localhost:3200" : "Admin: stopped"
+  ];
 }
 
 function adminMetrics() {

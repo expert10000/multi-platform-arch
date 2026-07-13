@@ -8,6 +8,7 @@ This workspace implements the runtime-independent platform described in the temp
 - worker protocol with an in-memory queue
 - OpenAPI contract as the public boundary
 - Node HTTP backend as one replaceable runtime host
+- Spring Boot backend as a JVM/server runtime option
 - local web host for workspaces, documents, and processing jobs
 - background worker lifecycle for queued jobs
 - local file ingestion with document metadata stored in SQLite
@@ -24,6 +25,7 @@ packages/
 apps/
   backends/node/src/           Node HTTP implementation of the contract
   backends/python/             Python HTTP implementation of the same contract
+  backends/spring/             Spring Boot implementation of the same contract
   hosts/admin/public/          Central admin console
   hosts/web/public/            Separate web workspace host
   hosts/electron/              Desktop host scaffold
@@ -69,10 +71,30 @@ Run the dependency-free Python backend:
 npm run start:backend:python
 ```
 
-Both backends expose the same OpenAPI route surface. The Python backend keeps
-metadata in memory and stores uploaded bytes under `data/python-files/`.
-Both backends allow cross-origin requests so hosts can be served separately and
-point their API client at either backend URL.
+Run the Spring Boot backend after installing JDK 17+ and Maven:
+
+```bash
+npm run start:backend:spring
+```
+
+The Spring Boot backend listens on `http://localhost:3200` by default.
+
+All backends expose the same OpenAPI route surface. The Python backend keeps
+metadata in memory and stores uploaded bytes under `data/python-files/`. The
+Spring Boot backend keeps metadata in memory, stores uploaded bytes under
+`data/spring-files/`, serves the same admin and web hosts, and implements the
+same desktop host control endpoints. Backends allow cross-origin requests so
+hosts can be served separately and point their API client at any compatible
+backend URL.
+
+## Backend Choice
+
+Use Node as the local/default dashboard backend, especially for desktop launcher
+workflows and quick local development. Use Spring Boot for shared/server
+deployments where JVM operations, enterprise integrations, and Java ecosystem
+tooling are preferred. Desktop hosts should not be hardwired to one backend:
+keep `DZONE_BACKEND_URL` as the switch so a desktop can use Node locally or
+Spring Boot when connected to a shared service.
 
 ## Hosts
 

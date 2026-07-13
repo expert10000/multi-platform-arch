@@ -14,7 +14,9 @@ const dotnetDesktopHostRoot = fileURLToPath(new URL("../../../hosts/dotnet-deskt
 const mauiHostRoot = fileURLToPath(new URL("../../../hosts/maui/DzoneMauiHost/", import.meta.url));
 const repoRoot = fileURLToPath(new URL("../../../../", import.meta.url));
 const mauiInstallScript = fileURLToPath(new URL("../../../../scripts/install-maui-workload.ps1", import.meta.url));
+const springInstallScript = fileURLToPath(new URL("../../../../scripts/install-spring-tooling.ps1", import.meta.url));
 const defaultMauiSetupLog = fileURLToPath(new URL("../../../../data/runtime/maui-setup.log", import.meta.url));
+const defaultSpringSetupLog = fileURLToPath(new URL("../../../../data/runtime/spring-setup.log", import.meta.url));
 const defaultFileStorageRoot = fileURLToPath(new URL("../../../../data/files/", import.meta.url));
 
 export function createServer(
@@ -29,8 +31,12 @@ export function createServer(
     closeDotnetDesktopHost,
     launchMauiHost,
     closeMauiHost,
+    launchSpringBackend,
+    closeSpringBackend,
     setupMauiHost,
-    getMauiSetupStatus
+    getMauiSetupStatus,
+    setupSpringBackend,
+    getSpringSetupStatus
   } = options;
   const electronHostController =
     launchElectronHost || closeElectronHost
@@ -56,6 +62,16 @@ export function createServer(
   const defaultMauiSetupRunner = createMauiSetupRunner();
   const mauiSetup = setupMauiHost ?? defaultMauiSetupRunner;
   const mauiSetupStatus = getMauiSetupStatus ?? defaultMauiSetupRunner.status;
+  const springBackendController =
+    launchSpringBackend || closeSpringBackend
+      ? {
+          launchSpringBackend,
+          closeSpringBackend: closeSpringBackend ?? defaultCloseSpringBackend
+        }
+      : createSpringBackendController();
+  const defaultSpringSetupRunner = createSpringSetupRunner();
+  const springSetup = setupSpringBackend ?? defaultSpringSetupRunner;
+  const springSetupStatus = getSpringSetupStatus ?? defaultSpringSetupRunner.status;
   const service = platform.services.documents;
 
   return createHttpServer(async (request, response) => {
@@ -101,6 +117,22 @@ export function createServer(
 
       if (method === "GET" && path === "/runtime/hosts/maui/setup") {
         return sendJson(response, 200, await mauiSetupStatus());
+      }
+
+      if (method === "POST" && path === "/runtime/backends/spring/setup") {
+        return sendJson(response, 202, await springSetup());
+      }
+
+      if (method === "GET" && path === "/runtime/backends/spring/setup") {
+        return sendJson(response, 200, await springSetupStatus());
+      }
+
+      if (method === "POST" && path === "/runtime/backends/spring/open") {
+        return sendJson(response, 202, await springBackendController.launchSpringBackend({ backendUrl: "http://localhost:3200" }));
+      }
+
+      if (method === "POST" && path === "/runtime/backends/spring/close") {
+        return sendJson(response, 202, await springBackendController.closeSpringBackend({ backendUrl: "http://localhost:3200" }));
       }
 
       if (method === "POST" && path === "/runtime/hosts/maui/open") {
@@ -421,6 +453,153 @@ export function createMauiSetupRunner({
   return setupMauiHost;
 }
 
+export function createSpringSetupRunner({
+  scriptPath = springInstallScript,
+  workingDirectory = repoRoot,
+  logPath = defaultSpringSetupLog,
+  spawnProcess = spawn,
+  isProcessRunning = isChildProcessRunning,
+  now = () => new Date(),
+  checkCommand = commandAvailable,
+  checkSpringRuntime = springRuntimeState
+} = {}) {
+  let setupProcess = null;
+  let state = {
+    host: "spring",
+    status: "idle",
+    command: "winget install Microsoft.OpenJDK.17 and Apache.Maven",
+    logPath,
+    startedAt: null,
+    finishedAt: null,
+    exitCode: null,
+    signal: null,
+    lastOutput: "",
+    java: "unknown",
+    maven: "unknown",
+    spring: "unknown"
+  };
+
+  async function setupSpringBackend() {
+    if (isProcessRunning(setupProcess)) {
+      return setupStatus("running");
+    }
+    setupProcess = null;
+
+    await mkdir(dirname(logPath), { recursive: true });
+    await appendLog(logPath, `\n[spring] Setup requested at ${now().toISOString()}\n`);
+    state = {
+      ...state,
+      status: "starting",
+      startedAt: now().toISOString(),
+      finishedAt: null,
+      exitCode: null,
+      signal: null,
+      lastOutput: ""
+    };
+
+    setupProcess = spawnProcess(springSetupExecutable(), springSetupArgs(scriptPath), {
+      cwd: workingDirectory,
+      detached: false,
+      shell: false,
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true
+    });
+    await appendLog(logPath, `[spring] Setup process started${setupProcess.pid ? ` with pid ${setupProcess.pid}` : ""}\n`);
+    captureInstallerOutput(setupProcess.stdout, logPath, (text) => updateLastOutput(text));
+    captureInstallerOutput(setupProcess.stderr, logPath, (text) => updateLastOutput(text));
+    setupProcess.once?.("close", async (exitCode, signal) => {
+      const finishedAt = now().toISOString();
+      const status = exitCode === 0 ? "completed" : "failed";
+      state = {
+        ...state,
+        status,
+        finishedAt,
+        exitCode,
+        signal
+      };
+      await appendLog(logPath, `[spring] Setup ${status} at ${finishedAt} (exit ${exitCode ?? "none"}${signal ? `, signal ${signal}` : ""})\n`);
+      setupProcess = null;
+    });
+
+    return setupStatus("starting");
+  }
+
+  async function setupStatus(statusOverride) {
+    const running = isProcessRunning(setupProcess);
+    const [java, maven, spring] = await Promise.all([
+      checkCommand("java"),
+      checkCommand("mvn"),
+      checkSpringRuntime()
+    ]);
+    const lastOutput = await readLogTail(logPath);
+    const ready = java === "installed" && maven === "installed";
+    const status = statusOverride ?? (running ? "running" : ready ? "completed" : state.status);
+    state = {
+      ...state,
+      java,
+      maven,
+      spring,
+      lastOutput
+    };
+    return {
+      ...state,
+      status
+    };
+  }
+
+  function updateLastOutput(text) {
+    state = {
+      ...state,
+      lastOutput: trimLog(`${state.lastOutput}${text}`)
+    };
+  }
+
+  setupSpringBackend.status = setupStatus;
+  return setupSpringBackend;
+}
+
+export function createSpringBackendController({
+  workingDirectory = repoRoot,
+  spawnProcess = spawn,
+  isProcessRunning = isChildProcessRunning,
+  stopProcess = stopChildProcess,
+  checkSpringRuntime = springRuntimeState
+} = {}) {
+  let backendProcess = null;
+
+  return {
+    async launchSpringBackend({ backendUrl }) {
+      if (isProcessRunning(backendProcess)) {
+        return { host: "spring-backend", status: "running", backendUrl };
+      }
+      if (await checkSpringRuntime() === "running") {
+        return { host: "spring-backend", status: "running", backendUrl };
+      }
+      backendProcess = null;
+
+      backendProcess = spawnSpringBackend(workingDirectory, spawnProcess);
+      backendProcess.once?.("exit", () => {
+        backendProcess = null;
+      });
+      backendProcess.unref();
+
+      return { host: "spring-backend", status: "starting", backendUrl };
+    },
+
+    async closeSpringBackend({ backendUrl }) {
+      if (!isProcessRunning(backendProcess)) {
+        backendProcess = null;
+        return { host: "spring-backend", status: "stopped", backendUrl };
+      }
+
+      const processToStop = backendProcess;
+      backendProcess = null;
+      stopProcess(processToStop, spawnProcess);
+      return { host: "spring-backend", status: "stopping", backendUrl };
+    }
+  };
+}
+
 function electronLaunchCommand(hostRoot, fileExists) {
   const executablePath =
     process.platform === "win32"
@@ -491,6 +670,73 @@ function mauiSetupArgs(scriptPath) {
   return ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptPath];
 }
 
+function springSetupExecutable() {
+  return process.platform === "win32" ? "powershell.exe" : "pwsh";
+}
+
+function springSetupArgs(scriptPath) {
+  return ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptPath];
+}
+
+function spawnSpringBackend(workingDirectory, spawnProcess) {
+  const command = springBackendCommand();
+  return spawnProcess(command.file, command.args, {
+    cwd: workingDirectory,
+    detached: true,
+    env: { ...process.env, SERVER_PORT: "3200" },
+    shell: false,
+    stdio: "ignore",
+    windowsHide: command.windowsHide
+  });
+}
+
+function springBackendCommand() {
+  return process.platform === "win32"
+    ? {
+        file: "cmd.exe",
+        args: ["/d", "/s", "/c", "mvn -f apps/backends/spring/pom.xml spring-boot:run"],
+        windowsHide: true
+      }
+    : {
+        file: "mvn",
+        args: ["-f", "apps/backends/spring/pom.xml", "spring-boot:run"],
+        windowsHide: false
+      };
+}
+
+function commandAvailable(commandName, spawnProcess = spawn) {
+  return new Promise((resolve) => {
+    const command = process.platform === "win32"
+      ? {
+          file: "powershell.exe",
+          args: ["-NoProfile", "-Command", `if (Get-Command ${commandName} -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }`]
+        }
+      : {
+          file: "sh",
+          args: ["-lc", `command -v ${commandName}`]
+        };
+    const child = spawnProcess(command.file, command.args, {
+      stdio: "ignore",
+      windowsHide: true
+    });
+    child.once?.("error", () => resolve("missing"));
+    child.once?.("exit", (exitCode) => resolve(exitCode === 0 ? "installed" : "missing"));
+  });
+}
+
+async function springRuntimeState() {
+  try {
+    const response = await fetch("http://127.0.0.1:3200/health", { signal: AbortSignal.timeout(1200) });
+    if (!response.ok) {
+      return "stopped";
+    }
+    const health = await response.json();
+    return health.runtime === "spring-boot" ? "running" : "unknown";
+  } catch {
+    return "stopped";
+  }
+}
+
 function captureInstallerOutput(stream, logPath, onOutput) {
   stream?.on?.("data", (chunk) => {
     const text = String(chunk);
@@ -556,6 +802,10 @@ async function defaultCloseDotnetDesktopHost({ backendUrl }) {
 
 async function defaultCloseMauiHost({ backendUrl }) {
   return { host: "maui-desktop", status: "stopped", backendUrl };
+}
+
+async function defaultCloseSpringBackend({ backendUrl }) {
+  return { host: "spring-backend", status: "stopped", backendUrl };
 }
 
 function isStaticRequest(path) {

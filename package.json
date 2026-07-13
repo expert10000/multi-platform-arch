@@ -8,6 +8,7 @@
     "start": "node apps/backends/node/src/index.js",
     "start:backend:node": "node apps/backends/node/src/index.js",
     "start:backend:python": "python apps/backends/python/app.py",
+    "start:backend:spring": "mvn -f apps/backends/spring/pom.xml spring-boot:run",
     "start:host:electron": "npm --prefix apps/hosts/electron start",
     "start:host:dotnet-desktop": "dotnet run --project apps/hosts/dotnet-desktop/DzoneDotnetDesktopHost.csproj --no-launch-profile",
     "start:host:maui": "dotnet run --project apps/hosts/maui/DzoneMauiHost/DzoneMauiHost.csproj -f net10.0-windows10.0.19041.0 --no-launch-profile",

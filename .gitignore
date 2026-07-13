@@ -1,4 +1,5 @@
 node_modules/
+target/
 bin/
 obj/
 data/*.sqlite
