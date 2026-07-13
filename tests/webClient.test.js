@@ -35,6 +35,10 @@ test("central admin exposes hosts backends and workers panels", async () => {
   }
 
   assert.match(html, /Central Admin Console/);
+  assert.match(html, /data-central-section="runtime"/);
+  assert.match(html, /data-central-section="workspaces"/);
+  assert.match(appSource, /activeCentralSection: "runtime"/);
+  assert.match(appSource, /renderCentralView/);
   assert.match(appSource, /Node Backend/);
   assert.match(appSource, /Open Node Admin/);
   assert.match(appSource, /Spring Boot Backend/);

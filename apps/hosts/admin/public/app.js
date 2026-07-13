@@ -10,6 +10,7 @@ const state = {
   pythonHealth: null,
   runtimeName: "unknown",
   activeWorkspaceId: null,
+  activeCentralSection: "runtime",
   activeArchitectureSection: "models",
   activeImplementationSection: "hosts"
 };
@@ -73,6 +74,8 @@ const elements = {
   architectureDetail: document.querySelector("#architectureDetail"),
   implementationTabs: document.querySelector("#implementationTabs"),
   implementationDetail: document.querySelector("#implementationDetail"),
+  centralTabs: document.querySelector("#centralTabs"),
+  centralViews: document.querySelectorAll("[data-central-view]"),
   toast: document.querySelector("#toast")
 };
 
@@ -92,6 +95,15 @@ elements.refreshButton.addEventListener("click", async () => {
     render();
     showToast("Workspace refreshed.");
   });
+});
+
+elements.centralTabs.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-central-section]");
+  if (!button) {
+    return;
+  }
+  state.activeCentralSection = button.dataset.centralSection;
+  renderCentralView();
 });
 
 elements.platformTabs.addEventListener("click", (event) => {
@@ -254,8 +266,23 @@ function render() {
   renderWorkspaces();
   renderDocuments();
   renderJobs();
+  renderCentralView();
   renderArchitecture();
   renderImplementations();
+}
+
+function renderCentralView() {
+  for (const button of elements.centralTabs.querySelectorAll("[data-central-section]")) {
+    const isActive = button.dataset.centralSection === state.activeCentralSection;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
+  }
+
+  for (const view of elements.centralViews) {
+    const isActive = view.dataset.centralView === state.activeCentralSection;
+    view.classList.toggle("active", isActive);
+    view.hidden = !isActive;
+  }
 }
 
 function renderWorkspaces() {
