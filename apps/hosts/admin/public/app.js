@@ -366,8 +366,8 @@ function implementationSections(metrics) {
         name: "Electron Host",
         status: "Available",
         summary: "Desktop shell for local files, workspace browsing, uploads, jobs, and backend switching.",
-        href: "https://github.com/expert10000/multi-platform-arch/tree/main/apps/hosts/electron",
-        action: "View Desktop Source",
+        command: "launchElectronHost",
+        action: "Launch Desktop",
         facts: ["Same workspace workflow as Web Host", "Can call Node or Python backend", "Good fit for file-heavy workflows"]
       }
     ],
@@ -456,8 +456,23 @@ function implementationCard(implementation) {
     link.textContent = implementation.action ?? "Open";
     article.append(link);
   }
+  if (implementation.command === "launchElectronHost") {
+    const button = document.createElement("button");
+    button.className = "implementation-link";
+    button.type = "button";
+    button.textContent = implementation.action ?? "Launch";
+    button.addEventListener("click", () => launchElectronHost());
+    article.append(button);
+  }
   article.append(facts);
   return article;
+}
+
+async function launchElectronHost() {
+  await runAction(async () => {
+    const result = await platformApi.launchElectronHost();
+    showToast(result.status === "running" ? "Desktop is already running." : "Desktop is launching.");
+  });
 }
 
 function adminMetrics() {

@@ -35,6 +35,10 @@ test("backend covers every OpenAPI operation", async () => {
     coveredOperations.add("getHealth");
     assert.equal(health.ok, true);
 
+    const launch = await api.launchElectronHost();
+    coveredOperations.add("launchElectronHost");
+    assert.equal(launch.host, "electron");
+
     const initialWorkspaces = await api.listWorkspaces();
     coveredOperations.add("listWorkspaces");
     assert.deepEqual(initialWorkspaces, []);
@@ -152,7 +156,14 @@ async function readOpenApiOperations() {
 }
 
 async function startServer(options) {
-  const server = createServer(undefined, options);
+  const server = createServer(undefined, {
+    ...options,
+    launchElectronHost: async ({ backendUrl }) => ({
+      host: "electron",
+      status: "starting",
+      backendUrl
+    })
+  });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address();
   return { server, baseUrl: `http://127.0.0.1:${port}` };

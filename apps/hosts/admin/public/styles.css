@@ -426,6 +426,10 @@ button:focus-visible {
   text-decoration: none;
 }
 
+button.implementation-link {
+  cursor: pointer;
+}
+
 .implementation-facts span {
   border-radius: 8px;
   padding: 5px 8px;

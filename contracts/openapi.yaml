@@ -16,6 +16,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Health"
+  /runtime/hosts/electron/open:
+    post:
+      operationId: launchElectronHost
+      responses:
+        "202":
+          description: Electron host launch requested.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeHostLaunchResult"
   /workspaces:
     get:
       operationId: listWorkspaces
@@ -356,3 +366,15 @@ components:
           $ref: "#/components/schemas/Document"
         job:
           $ref: "#/components/schemas/ProcessingJob"
+    RuntimeHostLaunchResult:
+      type: object
+      required: [host, status, backendUrl]
+      properties:
+        host:
+          type: string
+          enum: [electron]
+        status:
+          type: string
+          enum: [starting, running]
+        backendUrl:
+          type: string

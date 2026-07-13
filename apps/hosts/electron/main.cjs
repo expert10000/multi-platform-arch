@@ -3,6 +3,8 @@ const path = require("node:path");
 
 const backendUrl = process.env.DZONE_BACKEND_URL || "http://localhost:3000";
 const browserPaths = new Set(["/admin/", "/web/"]);
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+let mainWindow = null;
 
 function browserUrl(baseUrl, routePath) {
   if (!browserPaths.has(routePath)) {
@@ -17,7 +19,7 @@ function browserUrl(baseUrl, routePath) {
 }
 
 function createWindow() {
-  const window = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1280,
     height: 860,
     minWidth: 960,
@@ -31,8 +33,12 @@ function createWindow() {
     }
   });
 
-  window.loadFile(path.join(__dirname, "renderer", "index.html"), {
+  mainWindow.loadFile(path.join(__dirname, "renderer", "index.html"), {
     query: { backendUrl }
+  });
+
+  mainWindow.on("closed", () => {
+    mainWindow = null;
   });
 }
 
@@ -42,15 +48,29 @@ ipcMain.handle("open-platform-browser", async (_event, payload) => {
   return url;
 });
 
-app.whenReady().then(() => {
-  createWindow();
-
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+if (!hasSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (!mainWindow) {
+      return;
     }
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    mainWindow.focus();
   });
-});
+
+  app.whenReady().then(() => {
+    createWindow();
+
+    app.on("activate", () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow();
+      }
+    });
+  });
+}
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {

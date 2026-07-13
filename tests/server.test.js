@@ -103,6 +103,28 @@ test("node backend supports cross-origin preflight for separated hosts", async (
   }
 });
 
+test("launches the Electron host through a local runtime command", async () => {
+  const launches = [];
+  const { server, baseUrl } = await startServer({
+    launchElectronHost: async (input) => {
+      launches.push(input);
+      return { host: "electron", status: "starting", backendUrl: input.backendUrl };
+    }
+  });
+  const api = createPlatformApi({ baseUrl });
+
+  try {
+    const result = await api.launchElectronHost();
+
+    assert.equal(result.host, "electron");
+    assert.equal(result.status, "starting");
+    assert.equal(result.backendUrl, baseUrl);
+    assert.deepEqual(launches, [{ backendUrl: baseUrl }]);
+  } finally {
+    server.close();
+  }
+});
+
 async function startServer(options) {
   const server = createServer(undefined, options);
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));

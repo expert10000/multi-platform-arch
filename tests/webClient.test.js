@@ -39,7 +39,8 @@ test("central admin exposes hosts backends and workers panels", async () => {
   assert.match(appSource, /Python Backend/);
   assert.match(appSource, /\.NET MAUI Host/);
   assert.match(appSource, /Electron Host/);
-  assert.match(appSource, /View Desktop Source/);
+  assert.match(appSource, /Launch Desktop/);
+  assert.match(appSource, /launchElectronHost/);
   assert.match(appSource, /Open Web Host/);
 });
 
@@ -81,6 +82,8 @@ test("electron host exposes desktop workspace document and job surfaces", async 
   assert.match(rendererSource, /dzoneDesktop/);
   assert.match(mainSource, /DZONE_BACKEND_URL/);
   assert.match(mainSource, /preload\.cjs/);
+  assert.match(mainSource, /requestSingleInstanceLock/);
+  assert.match(mainSource, /second-instance/);
   assert.match(mainSource, /open-platform-browser/);
   assert.match(mainSource, /openExternal/);
   assert.match(preloadSource, /contextBridge/);

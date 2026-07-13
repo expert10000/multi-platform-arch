@@ -1,4 +1,5 @@
 import { createServer as createHttpServer } from "node:http";
+import { spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,9 +8,16 @@ import { createPlatform, NotFoundError, ValidationError } from "../../../../pack
 const adminPublicRoot = fileURLToPath(new URL("../../../hosts/admin/public", import.meta.url));
 const webPublicRoot = fileURLToPath(new URL("../../../hosts/web/public", import.meta.url));
 const sharedPublicRoot = fileURLToPath(new URL("../../../hosts/shared/public", import.meta.url));
+const electronHostRoot = fileURLToPath(new URL("../../../hosts/electron/", import.meta.url));
 const defaultFileStorageRoot = fileURLToPath(new URL("../../../../data/files/", import.meta.url));
 
-export function createServer(platform = createPlatform(), { fileStorageRoot = defaultFileStorageRoot } = {}) {
+export function createServer(
+  platform = createPlatform(),
+  {
+    fileStorageRoot = defaultFileStorageRoot,
+    launchElectronHost = createElectronHostLauncher()
+  } = {}
+) {
   const service = platform.services.documents;
 
   return createHttpServer(async (request, response) => {
@@ -31,6 +39,10 @@ export function createServer(platform = createPlatform(), { fileStorageRoot = de
 
       if (method === "GET" && path === "/health") {
         return sendJson(response, 200, { ok: true, runtime: "node" });
+      }
+
+      if (method === "POST" && path === "/runtime/hosts/electron/open") {
+        return sendJson(response, 202, await launchElectronHost({ backendUrl: requestBaseUrl(request) }));
       }
 
       if (method === "GET" && path === "/workspaces") {
@@ -112,6 +124,28 @@ export function createServer(platform = createPlatform(), { fileStorageRoot = de
       return sendError(response, error);
     }
   });
+}
+
+export function createElectronHostLauncher({ hostRoot = electronHostRoot } = {}) {
+  let hostProcess = null;
+
+  return async function launchElectronHost({ backendUrl }) {
+    if (hostProcess && hostProcess.exitCode === null && hostProcess.signalCode === null) {
+      return { host: "electron", status: "running", backendUrl };
+    }
+
+    hostProcess = spawn("npm", ["start"], {
+      cwd: hostRoot,
+      detached: true,
+      env: { ...process.env, DZONE_BACKEND_URL: backendUrl },
+      shell: process.platform === "win32",
+      stdio: "ignore",
+      windowsHide: true
+    });
+    hostProcess.unref();
+
+    return { host: "electron", status: "starting", backendUrl };
+  };
 }
 
 function isStaticRequest(path) {
@@ -238,6 +272,11 @@ function sendError(response, error) {
       : 500;
   const message = statusCode === 500 ? "Internal server error." : error.message;
   sendJson(response, statusCode, { error: message });
+}
+
+function requestBaseUrl(request) {
+  const host = request.headers.host || "localhost:3000";
+  return `http://${host}`;
 }
 
 function contentTypeFor(filePath) {

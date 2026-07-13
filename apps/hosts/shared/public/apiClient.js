@@ -11,7 +11,8 @@ export const apiOperations = Object.freeze({
   processDocument: "POST /documents/{id}/process",
   uploadDocumentFile: "POST /documents/{id}/file",
   listJobs: "GET /jobs",
-  getJob: "GET /jobs/{id}"
+  getJob: "GET /jobs/{id}",
+  launchElectronHost: "POST /runtime/hosts/electron/open"
 });
 
 export const platformApi = createPlatformApi();
@@ -83,6 +84,12 @@ export function createPlatformApi({ baseUrl = "" } = {}) {
 
     getJob(id) {
       return request(baseUrl, `/jobs/${encodeId(id)}`);
+    },
+
+    launchElectronHost() {
+      return request(baseUrl, "/runtime/hosts/electron/open", {
+        method: "POST"
+      });
     }
   };
 }
