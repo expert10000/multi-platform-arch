@@ -4,7 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
 
-namespace DzoneMauiHost;
+namespace DzoneDotnetDesktopHost;
 
 public partial class MainWindow : Window
 {

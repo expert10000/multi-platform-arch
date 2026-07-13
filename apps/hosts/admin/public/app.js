@@ -29,7 +29,7 @@ const architectureSections = {
   hosts: {
     title: "Application Hosts",
     summary: "User-facing shells that consume the same platform contract.",
-    items: ["React Web", "Electron", "React Native", ".NET MAUI", "Uno", "Flutter"]
+    items: ["React Web", "Electron", ".NET Desktop", ".NET MAUI", "React Native", "Flutter"]
   },
   backends: {
     title: "Backend Implementations",
@@ -357,13 +357,21 @@ function implementationSections(metrics) {
         ]
       },
       {
-        name: ".NET MAUI Host",
+        name: ".NET Desktop Host",
         status: "Available",
-        summary: "Native .NET desktop host for workspace review, documents, jobs, and the shared platform contract.",
-        command: "launchMauiHost",
-        stopCommand: "closeMauiHost",
+        summary: "Lightweight Windows desktop host for workspace review, documents, jobs, and the shared platform contract.",
+        command: "launchDotnetDesktopHost",
+        stopCommand: "closeDotnetDesktopHost",
         action: "Launch .NET Desktop",
-        facts: ["Consumes OpenAPI", "Uses same DTOs", "MAUI-ready host boundary"]
+        facts: ["Works without MAUI workload", "Consumes OpenAPI", "Uses same DTOs"]
+      },
+      {
+        name: ".NET MAUI Desktop",
+        status: "Optional",
+        summary: "Optional MAUI desktop host for teams that want the MAUI workload and cross-device UI path.",
+        infoCommand: "showMauiInstallMessage",
+        action: "MAUI Setup",
+        facts: ["Install: dotnet workload install maui", "Optional host", "Future mobile path"]
       },
       {
         name: "Electron Host",
@@ -472,8 +480,16 @@ function implementationCard(implementation) {
     const button = document.createElement("button");
     button.className = "implementation-link stop";
     button.type = "button";
-    button.textContent = implementation.command === "launchMauiHost" ? "Stop .NET Desktop" : "Stop Desktop";
+    button.textContent = implementation.command === "launchDotnetDesktopHost" ? "Stop .NET Desktop" : "Stop Desktop";
     button.addEventListener("click", () => closeHost(implementation.stopCommand));
+    article.append(button);
+  }
+  if (implementation.infoCommand === "showMauiInstallMessage") {
+    const button = document.createElement("button");
+    button.className = "implementation-link";
+    button.type = "button";
+    button.textContent = implementation.action ?? "Details";
+    button.addEventListener("click", showMauiInstallMessage);
     article.append(button);
   }
   article.append(facts);
@@ -495,7 +511,11 @@ async function closeHost(command) {
 }
 
 function hostLabel(host) {
-  return host === "maui" ? ".NET desktop" : "Desktop";
+  return host === "dotnet-desktop" ? ".NET desktop" : "Desktop";
+}
+
+function showMauiInstallMessage() {
+  showToast("Install MAUI with: dotnet workload install maui");
 }
 
 function adminMetrics() {

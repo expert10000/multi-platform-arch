@@ -6,7 +6,7 @@ import test from "node:test";
 import {
   createElectronHostController,
   createElectronHostLauncher,
-  createMauiHostController,
+  createDotnetDesktopHostController,
   createServer
 } from "../apps/backends/node/src/server.js";
 import { createPlatformApi } from "../apps/hosts/shared/public/apiClient.js";
@@ -140,29 +140,29 @@ test("launches the Electron host through a local runtime command", async () => {
   }
 });
 
-test("launches the .NET MAUI host through a local runtime command", async () => {
+test("launches the .NET Desktop host through a local runtime command", async () => {
   const launches = [];
   const closes = [];
   const { server, baseUrl } = await startServer({
-    launchMauiHost: async (input) => {
+    launchDotnetDesktopHost: async (input) => {
       launches.push(input);
-      return { host: "maui", status: "starting", backendUrl: input.backendUrl };
+      return { host: "dotnet-desktop", status: "starting", backendUrl: input.backendUrl };
     },
-    closeMauiHost: async (input) => {
+    closeDotnetDesktopHost: async (input) => {
       closes.push(input);
-      return { host: "maui", status: "stopping", backendUrl: input.backendUrl };
+      return { host: "dotnet-desktop", status: "stopping", backendUrl: input.backendUrl };
     }
   });
   const api = createPlatformApi({ baseUrl });
 
   try {
-    const result = await api.launchMauiHost();
-    const close = await api.closeMauiHost();
+    const result = await api.launchDotnetDesktopHost();
+    const close = await api.closeDotnetDesktopHost();
 
-    assert.equal(result.host, "maui");
+    assert.equal(result.host, "dotnet-desktop");
     assert.equal(result.status, "starting");
     assert.equal(result.backendUrl, baseUrl);
-    assert.equal(close.host, "maui");
+    assert.equal(close.host, "dotnet-desktop");
     assert.equal(close.status, "stopping");
     assert.equal(close.backendUrl, baseUrl);
     assert.deepEqual(launches, [{ backendUrl: baseUrl }]);
@@ -274,10 +274,10 @@ test("electron controller stops a running desktop process", async () => {
   assert.deepEqual(stops, [123]);
 });
 
-test("maui controller starts and stops the dotnet desktop host", async () => {
+test("dotnet desktop controller starts and stops the desktop host", async () => {
   const launches = [];
   const stops = [];
-  const controller = createMauiHostController({
+  const controller = createDotnetDesktopHostController({
     hostRoot: process.platform === "win32" ? "C:\\host" : "/tmp/host",
     fileExists: () => false,
     spawnProcess: (file, args, options) => {
@@ -300,15 +300,15 @@ test("maui controller starts and stops the dotnet desktop host", async () => {
     }
   });
 
-  const launch = await controller.launchMauiHost({ backendUrl: "http://localhost:3000" });
-  const close = await controller.closeMauiHost({ backendUrl: "http://localhost:3000" });
-  const secondClose = await controller.closeMauiHost({ backendUrl: "http://localhost:3000" });
+  const launch = await controller.launchDotnetDesktopHost({ backendUrl: "http://localhost:3000" });
+  const close = await controller.closeDotnetDesktopHost({ backendUrl: "http://localhost:3000" });
+  const secondClose = await controller.closeDotnetDesktopHost({ backendUrl: "http://localhost:3000" });
 
   assert.equal(launch.status, "starting");
   assert.equal(close.status, "stopping");
   assert.equal(secondClose.status, "stopped");
   assert.equal(launches[0].file, "dotnet");
-  assert.deepEqual(launches[0].args, ["run", "--project", "DzoneMauiHost.csproj", "--no-launch-profile"]);
+  assert.deepEqual(launches[0].args, ["run", "--project", "DzoneDotnetDesktopHost.csproj", "--no-launch-profile"]);
   assert.equal(launches[0].options.windowsHide, true);
   assert.deepEqual(stops, [456]);
 });

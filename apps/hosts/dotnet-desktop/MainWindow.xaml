@@ -1,7 +1,7 @@
-<Window x:Class="DzoneMauiHost.MainWindow"
+<Window x:Class="DzoneDotnetDesktopHost.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="DZONE .NET MAUI Host"
+        Title="DZONE .NET Desktop Host"
         Width="1180"
         Height="760"
         MinWidth="940"
@@ -33,7 +33,7 @@
         </Grid.ColumnDefinitions>
 
         <StackPanel>
-          <TextBlock Text=".NET MAUI HOST" Foreground="#617181" FontSize="12" FontWeight="Bold" />
+          <TextBlock Text=".NET DESKTOP HOST" Foreground="#617181" FontSize="12" FontWeight="Bold" />
           <TextBlock Text="Desktop Workspace" Foreground="#15202A" FontSize="26" FontWeight="Bold" />
         </StackPanel>
 

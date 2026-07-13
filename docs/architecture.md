@@ -43,7 +43,7 @@ Document uploads store searchable metadata in SQLite and write file bytes under 
 
 Other hosts can follow the same pattern:
 
-- React, Electron, React Native, MAUI, Uno, or Flutter clients consume the OpenAPI contract.
+- React, Electron, lightweight .NET Desktop, optional .NET MAUI, React Native, Uno, or Flutter clients consume the OpenAPI contract.
 - ASP.NET Core, Spring Boot, FastAPI, or Go backends implement the same contract.
 - SQLite, PostgreSQL, SQL Server, or in-memory stores implement the same repository behavior.
 - Python, Node, AI, or search workers implement the same job protocol.

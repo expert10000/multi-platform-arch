@@ -1,17 +1,23 @@
-# .NET MAUI Host
+# .NET MAUI Desktop Host
 
-Desktop host for the shared platform contract.
+Optional MAUI desktop host for the shared platform contract.
 
-The current checked-in project is a Windows desktop shell that uses the same OpenAPI surface as the Web and Electron hosts. It is placed behind the `.NET MAUI Host` runtime boundary so the UI can be moved to a full MAUI project once the MAUI workload is installed.
+The repository works by default without MAUI through `apps/hosts/dotnet-desktop`. Use this folder when you want a real MAUI implementation.
 
-Run locally:
+Install the MAUI workload before creating or running this host:
 
 ```bash
-dotnet run --project apps/hosts/maui/DzoneMauiHost.csproj --no-launch-profile
+dotnet workload install maui
 ```
 
-Use a different backend:
+or restore workloads from a future MAUI project:
 
 ```bash
-DZONE_BACKEND_URL=http://localhost:3100 dotnet run --project apps/hosts/maui/DzoneMauiHost.csproj --no-launch-profile
+dotnet workload restore
+```
+
+Suggested project command once the workload is installed:
+
+```bash
+dotnet new maui -n DzoneMauiHost
 ```

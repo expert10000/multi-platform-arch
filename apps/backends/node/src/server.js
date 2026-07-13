@@ -10,7 +10,7 @@ const adminPublicRoot = fileURLToPath(new URL("../../../hosts/admin/public", imp
 const webPublicRoot = fileURLToPath(new URL("../../../hosts/web/public", import.meta.url));
 const sharedPublicRoot = fileURLToPath(new URL("../../../hosts/shared/public", import.meta.url));
 const electronHostRoot = fileURLToPath(new URL("../../../hosts/electron/", import.meta.url));
-const mauiHostRoot = fileURLToPath(new URL("../../../hosts/maui/", import.meta.url));
+const dotnetDesktopHostRoot = fileURLToPath(new URL("../../../hosts/dotnet-desktop/", import.meta.url));
 const defaultFileStorageRoot = fileURLToPath(new URL("../../../../data/files/", import.meta.url));
 
 export function createServer(
@@ -21,8 +21,8 @@ export function createServer(
     fileStorageRoot = defaultFileStorageRoot,
     launchElectronHost,
     closeElectronHost,
-    launchMauiHost,
-    closeMauiHost
+    launchDotnetDesktopHost,
+    closeDotnetDesktopHost
   } = options;
   const electronHostController =
     launchElectronHost || closeElectronHost
@@ -31,13 +31,13 @@ export function createServer(
           closeElectronHost: closeElectronHost ?? defaultCloseElectronHost
         }
       : createElectronHostController();
-  const mauiHostController =
-    launchMauiHost || closeMauiHost
+  const dotnetDesktopHostController =
+    launchDotnetDesktopHost || closeDotnetDesktopHost
       ? {
-          launchMauiHost,
-          closeMauiHost: closeMauiHost ?? defaultCloseMauiHost
+          launchDotnetDesktopHost,
+          closeDotnetDesktopHost: closeDotnetDesktopHost ?? defaultCloseDotnetDesktopHost
         }
-      : createMauiHostController();
+      : createDotnetDesktopHostController();
   const service = platform.services.documents;
 
   return createHttpServer(async (request, response) => {
@@ -69,12 +69,12 @@ export function createServer(
         return sendJson(response, 202, await electronHostController.closeElectronHost({ backendUrl: requestBaseUrl(request) }));
       }
 
-      if (method === "POST" && path === "/runtime/hosts/maui/open") {
-        return sendJson(response, 202, await mauiHostController.launchMauiHost({ backendUrl: requestBaseUrl(request) }));
+      if (method === "POST" && path === "/runtime/hosts/dotnet-desktop/open") {
+        return sendJson(response, 202, await dotnetDesktopHostController.launchDotnetDesktopHost({ backendUrl: requestBaseUrl(request) }));
       }
 
-      if (method === "POST" && path === "/runtime/hosts/maui/close") {
-        return sendJson(response, 202, await mauiHostController.closeMauiHost({ backendUrl: requestBaseUrl(request) }));
+      if (method === "POST" && path === "/runtime/hosts/dotnet-desktop/close") {
+        return sendJson(response, 202, await dotnetDesktopHostController.closeDotnetDesktopHost({ backendUrl: requestBaseUrl(request) }));
       }
 
       if (method === "GET" && path === "/workspaces") {
@@ -218,8 +218,8 @@ export function createElectronHostController({
   };
 }
 
-export function createMauiHostController({
-  hostRoot = mauiHostRoot,
+export function createDotnetDesktopHostController({
+  hostRoot = dotnetDesktopHostRoot,
   fileExists = existsSync,
   spawnProcess = spawn,
   isProcessRunning = isChildProcessRunning,
@@ -228,12 +228,12 @@ export function createMauiHostController({
   let hostProcess = null;
 
   return {
-    async launchMauiHost({ backendUrl }) {
-      const command = mauiLaunchCommand(hostRoot, fileExists);
+    async launchDotnetDesktopHost({ backendUrl }) {
+      const command = dotnetDesktopLaunchCommand(hostRoot, fileExists);
 
       if (isProcessRunning(hostProcess)) {
         focusRuntimeHost(command, hostRoot, backendUrl, spawnProcess);
-        return { host: "maui", status: "running", backendUrl };
+        return { host: "dotnet-desktop", status: "running", backendUrl };
       }
       hostProcess = null;
 
@@ -243,19 +243,19 @@ export function createMauiHostController({
       });
       hostProcess.unref();
 
-      return { host: "maui", status: "starting", backendUrl };
+      return { host: "dotnet-desktop", status: "starting", backendUrl };
     },
 
-    async closeMauiHost({ backendUrl }) {
+    async closeDotnetDesktopHost({ backendUrl }) {
       if (!isProcessRunning(hostProcess)) {
         hostProcess = null;
-        return { host: "maui", status: "stopped", backendUrl };
+        return { host: "dotnet-desktop", status: "stopped", backendUrl };
       }
 
       const processToStop = hostProcess;
       hostProcess = null;
       stopProcess(processToStop, spawnProcess);
-      return { host: "maui", status: "stopping", backendUrl };
+      return { host: "dotnet-desktop", status: "stopping", backendUrl };
     }
   };
 }
@@ -300,8 +300,8 @@ function spawnRuntimeHost(command, hostRoot, backendUrl, spawnProcess) {
   });
 }
 
-function mauiLaunchCommand(hostRoot, fileExists) {
-  const executablePath = join(hostRoot, "bin", "Debug", "net10.0-windows", "DzoneMauiHost.exe");
+function dotnetDesktopLaunchCommand(hostRoot, fileExists) {
+  const executablePath = join(hostRoot, "bin", "Debug", "net10.0-windows", "DzoneDotnetDesktopHost.exe");
 
   if (fileExists(executablePath)) {
     return { file: executablePath, args: [], windowsHide: false };
@@ -309,7 +309,7 @@ function mauiLaunchCommand(hostRoot, fileExists) {
 
   return {
     file: "dotnet",
-    args: ["run", "--project", "DzoneMauiHost.csproj", "--no-launch-profile"],
+    args: ["run", "--project", "DzoneDotnetDesktopHost.csproj", "--no-launch-profile"],
     windowsHide: true
   };
 }
@@ -352,8 +352,8 @@ async function defaultCloseElectronHost({ backendUrl }) {
   return { host: "electron", status: "stopped", backendUrl };
 }
 
-async function defaultCloseMauiHost({ backendUrl }) {
-  return { host: "maui", status: "stopped", backendUrl };
+async function defaultCloseDotnetDesktopHost({ backendUrl }) {
+  return { host: "dotnet-desktop", status: "stopped", backendUrl };
 }
 
 function isStaticRequest(path) {

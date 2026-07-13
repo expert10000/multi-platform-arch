@@ -1,6 +1,6 @@
 using System.Windows;
 
-namespace DzoneMauiHost;
+namespace DzoneDotnetDesktopHost;
 
 public partial class App : Application
 {
