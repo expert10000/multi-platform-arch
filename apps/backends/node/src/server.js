@@ -897,7 +897,7 @@ async function defaultCloseAspNetCoreBackend({ backendUrl }) {
 }
 
 function isStaticRequest(path) {
-  return path === "/" || path === "/admin" || path === "/web" || path === "/node-admin" || path === "/spring-admin" || path === "/python-admin" || path === "/aspnet-admin" || path.startsWith("/admin/") || path.startsWith("/web/") || path.startsWith("/shared/") || path.startsWith("/node-admin/") || path.startsWith("/spring-admin/") || path.startsWith("/python-admin/") || path.startsWith("/aspnet-admin/");
+  return path === "/" || path === "/admin" || path === "/web" || path === "/node-admin" || path === "/spring-admin" || path === "/python-admin" || path === "/aspnet-admin" || path === "/document-worker-admin" || path === "/python-worker-admin" || path === "/search-worker-admin" || path.startsWith("/admin/") || path.startsWith("/web/") || path.startsWith("/shared/") || path.startsWith("/node-admin/") || path.startsWith("/spring-admin/") || path.startsWith("/python-admin/") || path.startsWith("/aspnet-admin/") || path.startsWith("/document-worker-admin/") || path.startsWith("/python-worker-admin/") || path.startsWith("/search-worker-admin/");
 }
 
 async function tryServeStatic(path, response) {
@@ -949,6 +949,15 @@ function staticTargetFor(path) {
   if (path === "/aspnet-admin" || path === "/aspnet-admin/") {
     return { root: join(adminPublicRoot, "aspnet-admin"), relativePath: "index.html" };
   }
+  if (path === "/document-worker-admin" || path === "/document-worker-admin/") {
+    return { root: join(adminPublicRoot, "document-worker-admin"), relativePath: "index.html" };
+  }
+  if (path === "/python-worker-admin" || path === "/python-worker-admin/") {
+    return { root: join(adminPublicRoot, "python-worker-admin"), relativePath: "index.html" };
+  }
+  if (path === "/search-worker-admin" || path === "/search-worker-admin/") {
+    return { root: join(adminPublicRoot, "search-worker-admin"), relativePath: "index.html" };
+  }
   if (path.startsWith("/admin/")) {
     return { root: adminPublicRoot, relativePath: path.slice("/admin/".length) };
   }
@@ -966,6 +975,15 @@ function staticTargetFor(path) {
   }
   if (path.startsWith("/aspnet-admin/")) {
     return { root: join(adminPublicRoot, "aspnet-admin"), relativePath: path.slice("/aspnet-admin/".length) };
+  }
+  if (path.startsWith("/document-worker-admin/")) {
+    return { root: join(adminPublicRoot, "document-worker-admin"), relativePath: path.slice("/document-worker-admin/".length) };
+  }
+  if (path.startsWith("/python-worker-admin/")) {
+    return { root: join(adminPublicRoot, "python-worker-admin"), relativePath: path.slice("/python-worker-admin/".length) };
+  }
+  if (path.startsWith("/search-worker-admin/")) {
+    return { root: join(adminPublicRoot, "search-worker-admin"), relativePath: path.slice("/search-worker-admin/".length) };
   }
   if (path.startsWith("/shared/")) {
     return { root: sharedPublicRoot, relativePath: path.slice("/shared/".length) };

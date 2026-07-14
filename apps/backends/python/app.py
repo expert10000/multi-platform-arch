@@ -175,6 +175,56 @@ class Store:
             raise ApiError(404, f"Job '{job_id}' was not found.")
         return job
 
+    def next_queued_job(self) -> dict | None:
+        with self.lock:
+            queued = [job for job in self.jobs.values() if job["status"] == "queued"]
+        return min(queued, key=lambda item: item["createdAt"], default=None)
+
+    def update_job_status(self, job_id: str, status: str) -> dict:
+        with self.lock:
+            job = self.jobs.get(job_id)
+            if not job:
+                raise ApiError(404, f"Job '{job_id}' was not found.")
+            updated = {**job, "status": status}
+            self.jobs[job_id] = updated
+        return updated
+
+
+class JobWorker:
+    def __init__(self, store: Store, poll_interval: float = 0.25):
+        self.store = store
+        self.poll_interval = poll_interval
+        self.stop_event = threading.Event()
+        self.thread = threading.Thread(target=self.run, name="dzone-python-worker", daemon=True)
+
+    def start(self) -> None:
+        self.thread.start()
+
+    def stop(self) -> None:
+        self.stop_event.set()
+        self.thread.join(timeout=2)
+
+    def run(self) -> None:
+        while not self.stop_event.is_set():
+            job = self.store.next_queued_job()
+            if not job:
+                self.stop_event.wait(self.poll_interval)
+                continue
+            self.process(job)
+
+    def process(self, job: dict) -> None:
+        self.store.update_job_status(job["id"], "running")
+        try:
+            self.run_handler(job)
+            self.store.update_job_status(job["id"], "completed")
+        except Exception:
+            self.store.update_job_status(job["id"], "failed")
+
+    def run_handler(self, job: dict) -> None:
+        if job["type"] not in JOB_TYPES:
+            raise ValueError(f"Unsupported job type {job['type']}")
+        time.sleep(0.02)
+
 
 class RequestHandler(BaseHTTPRequestHandler):
     store: Store
@@ -396,6 +446,9 @@ def static_target_for(path: str) -> tuple[Path, str] | None:
         "/spring-admin/": ADMIN_ROOT / "spring-admin",
         "/python-admin/": ADMIN_ROOT / "python-admin",
         "/aspnet-admin/": ADMIN_ROOT / "aspnet-admin",
+        "/document-worker-admin/": ADMIN_ROOT / "document-worker-admin",
+        "/python-worker-admin/": ADMIN_ROOT / "python-worker-admin",
+        "/search-worker-admin/": ADMIN_ROOT / "search-worker-admin",
     }.items():
         if path.startswith(route):
             relative = path.removeprefix(route) or "index.html"
@@ -408,6 +461,12 @@ def static_target_for(path: str) -> tuple[Path, str] | None:
         return ADMIN_ROOT / "python-admin", "index.html"
     if path in {"/aspnet-admin", "/aspnet-admin/"}:
         return ADMIN_ROOT / "aspnet-admin", "index.html"
+    if path in {"/document-worker-admin", "/document-worker-admin/"}:
+        return ADMIN_ROOT / "document-worker-admin", "index.html"
+    if path in {"/python-worker-admin", "/python-worker-admin/"}:
+        return ADMIN_ROOT / "python-worker-admin", "index.html"
+    if path in {"/search-worker-admin", "/search-worker-admin/"}:
+        return ADMIN_ROOT / "search-worker-admin", "index.html"
     return None
 
 
@@ -436,8 +495,13 @@ def main() -> None:
     handler = type("DzonePythonHandler", (RequestHandler,), {})
     handler.store = Store(Path(args.file_root))
     server = ThreadingHTTPServer(("127.0.0.1", args.port), handler)
+    worker = JobWorker(handler.store)
+    worker.start()
     print(json.dumps({"url": f"http://127.0.0.1:{server.server_port}", "runtime": "python"}), flush=True)
-    server.serve_forever()
+    try:
+        server.serve_forever()
+    finally:
+        worker.stop()
 
 
 if __name__ == "__main__":

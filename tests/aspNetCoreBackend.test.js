@@ -27,6 +27,10 @@ test("ASP.NET Core backend supports the shared contract flow", { skip: !hasDotne
     assert.equal(aspNetAdmin.status, 200);
     assert.match(await aspNetAdmin.text(), /ASP.NET Admin/);
 
+    const searchWorkerAdmin = await fetch(`${backend.baseUrl}/search-worker-admin/`);
+    assert.equal(searchWorkerAdmin.status, 200);
+    assert.match(await searchWorkerAdmin.text(), /Search Worker Admin/);
+
     const workspace = await api.createWorkspace({ name: "ASP.NET Workspace" });
     const fetchedWorkspace = await api.getWorkspace(workspace.id);
     const document = await api.createDocument({

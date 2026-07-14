@@ -19,6 +19,10 @@ test("python backend supports the shared contract flow", async () => {
     assert.equal(pythonAdmin.status, 200);
     assert.match(await pythonAdmin.text(), /Python Admin/);
 
+    const pythonWorkerAdmin = await fetch(`${backend.baseUrl}/python-worker-admin/`);
+    assert.equal(pythonWorkerAdmin.status, 200);
+    assert.match(await pythonWorkerAdmin.text(), /Python Worker Admin/);
+
     const workspace = await api.createWorkspace({ name: "Python Workspace" });
     const fetchedWorkspace = await api.getWorkspace(workspace.id);
     const document = await api.createDocument({
@@ -35,9 +39,12 @@ test("python backend supports the shared contract flow", async () => {
       new File(["python file"], "python.txt", { type: "text/plain" })
     );
     const job = await api.processDocument(document.id, { type: "summarize" });
+    const searchJob = await api.processDocument(document.id, { type: "index-search" });
     const fetchedJob = await api.getJob(job.id);
     const documents = await api.listDocuments(workspace.id);
     const jobs = await api.listJobs();
+    const completedJob = await waitForJobStatus(api, job.id, "completed");
+    const completedSearchJob = await waitForJobStatus(api, searchJob.id, "completed");
     const preflight = await fetch(`${backend.baseUrl}/documents/${document.id}/file`, {
       method: "OPTIONS",
       headers: {
@@ -52,9 +59,12 @@ test("python backend supports the shared contract flow", async () => {
     assert.equal(upload.document.fileName, "python.txt");
     assert.equal(upload.job.type, "extract-text");
     assert.equal(job.type, "summarize");
+    assert.equal(searchJob.type, "index-search");
     assert.equal(fetchedJob.id, job.id);
+    assert.equal(completedJob.status, "completed");
+    assert.equal(completedSearchJob.status, "completed");
     assert.equal(documents.length, 1);
-    assert.equal(jobs.length, 2);
+    assert.equal(jobs.length, 3);
     assert.equal(preflight.status, 204);
     assert.equal(preflight.headers.get("access-control-allow-origin"), "*");
 
@@ -107,4 +117,16 @@ async function startPythonBackend(fileRoot) {
       });
     }
   };
+}
+
+async function waitForJobStatus(api, jobId, status) {
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    const job = await api.getJob(jobId);
+    if (job.status === status) {
+      return job;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  assert.fail(`Job ${jobId} did not reach ${status}.`);
 }

@@ -519,7 +519,9 @@ function implementationSections(metrics) {
       {
         name: "Document Worker",
         status: "Running",
-        summary: "Processes queued document jobs through the shared worker lifecycle.",
+        summary: "Processes queued document jobs through the shared worker lifecycle across the active backend.",
+        href: "/document-worker-admin/",
+        hrefAction: "Open Worker Admin",
         facts: [
           `${metrics.queuedJobs} queued`,
           `${metrics.runningJobs} running`,
@@ -528,15 +530,19 @@ function implementationSections(metrics) {
       },
       {
         name: "Python Worker",
-        status: "Planned",
-        summary: "Specialized worker for text extraction, OCR, summaries, embeddings, and semantic search.",
-        facts: ["Can consume same job protocol", "Good fit for AI/OCR libraries", "Can run out of process"]
+        status: pythonBackendStatus() === "Running" ? "Running" : "Available",
+        summary: "Python backend now runs a background worker for extract-text, thumbnail, summarize, and index-search jobs.",
+        href: "/python-worker-admin/",
+        hrefAction: "Open Python Worker",
+        facts: ["Python-first for AI/OCR libraries", "Runs queued jobs", `Backend: ${pythonBackendStatus().toLowerCase()}`]
       },
       {
         name: "Search Worker",
-        status: "Planned",
-        summary: "Indexes extracted document content and metadata for cross-host search.",
-        facts: ["Indexes files", "Indexes tags", "Publishes job results"]
+        status: "Available",
+        summary: "Uses the shared index-search job type so search indexing stays portable across runtimes.",
+        href: "/search-worker-admin/",
+        hrefAction: "Open Search Worker",
+        facts: [`${metrics.searchJobs} search jobs`, "Indexes metadata", "Ready for vector/keyword backends"]
       }
     ]
   };
@@ -913,7 +919,8 @@ function adminMetrics() {
     queuedJobs: countJobsByStatus("queued"),
     runningJobs: countJobsByStatus("running"),
     completedJobs: countJobsByStatus("completed"),
-    failedJobs: countJobsByStatus("failed")
+    failedJobs: countJobsByStatus("failed"),
+    searchJobs: state.jobs.filter((job) => job.type === "index-search").length
   };
 }
 

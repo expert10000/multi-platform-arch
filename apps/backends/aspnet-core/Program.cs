@@ -146,6 +146,9 @@ static StaticTarget? StaticTargetFor(string path, string repoRoot)
         "/spring-admin" or "/spring-admin/" => ResolveStatic(Path.Combine(adminRoot, "spring-admin"), "index.html"),
         "/python-admin" or "/python-admin/" => ResolveStatic(Path.Combine(adminRoot, "python-admin"), "index.html"),
         "/aspnet-admin" or "/aspnet-admin/" => ResolveStatic(Path.Combine(adminRoot, "aspnet-admin"), "index.html"),
+        "/document-worker-admin" or "/document-worker-admin/" => ResolveStatic(Path.Combine(adminRoot, "document-worker-admin"), "index.html"),
+        "/python-worker-admin" or "/python-worker-admin/" => ResolveStatic(Path.Combine(adminRoot, "python-worker-admin"), "index.html"),
+        "/search-worker-admin" or "/search-worker-admin/" => ResolveStatic(Path.Combine(adminRoot, "search-worker-admin"), "index.html"),
         _ when path.StartsWith("/admin/", StringComparison.Ordinal) => ResolveStatic(adminRoot, path["/admin/".Length..]),
         _ when path.StartsWith("/web/", StringComparison.Ordinal) => ResolveStatic(webRoot, path["/web/".Length..]),
         _ when path.StartsWith("/shared/", StringComparison.Ordinal) => ResolveStatic(sharedRoot, path["/shared/".Length..]),
@@ -153,6 +156,9 @@ static StaticTarget? StaticTargetFor(string path, string repoRoot)
         _ when path.StartsWith("/spring-admin/", StringComparison.Ordinal) => ResolveStatic(Path.Combine(adminRoot, "spring-admin"), path["/spring-admin/".Length..]),
         _ when path.StartsWith("/python-admin/", StringComparison.Ordinal) => ResolveStatic(Path.Combine(adminRoot, "python-admin"), path["/python-admin/".Length..]),
         _ when path.StartsWith("/aspnet-admin/", StringComparison.Ordinal) => ResolveStatic(Path.Combine(adminRoot, "aspnet-admin"), path["/aspnet-admin/".Length..]),
+        _ when path.StartsWith("/document-worker-admin/", StringComparison.Ordinal) => ResolveStatic(Path.Combine(adminRoot, "document-worker-admin"), path["/document-worker-admin/".Length..]),
+        _ when path.StartsWith("/python-worker-admin/", StringComparison.Ordinal) => ResolveStatic(Path.Combine(adminRoot, "python-worker-admin"), path["/python-worker-admin/".Length..]),
+        _ when path.StartsWith("/search-worker-admin/", StringComparison.Ordinal) => ResolveStatic(Path.Combine(adminRoot, "search-worker-admin"), path["/search-worker-admin/".Length..]),
         _ => null
     };
 }

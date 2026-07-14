@@ -215,7 +215,11 @@ test("serves dedicated runtime admin hosts", async () => {
     const springAdmin = await fetch(`${baseUrl}/spring-admin/`);
     const pythonAdmin = await fetch(`${baseUrl}/python-admin/`);
     const aspNetAdmin = await fetch(`${baseUrl}/aspnet-admin/`);
+    const documentWorkerAdmin = await fetch(`${baseUrl}/document-worker-admin/`);
+    const pythonWorkerAdmin = await fetch(`${baseUrl}/python-worker-admin/`);
+    const searchWorkerAdmin = await fetch(`${baseUrl}/search-worker-admin/`);
     const runtimeScript = await fetch(`${baseUrl}/admin/runtime-admin.js`);
+    const workerScript = await fetch(`${baseUrl}/admin/worker-admin.js`);
 
     assert.equal(nodeAdmin.status, 200);
     assert.match(await nodeAdmin.text(), /Node Admin/);
@@ -225,8 +229,16 @@ test("serves dedicated runtime admin hosts", async () => {
     assert.match(await pythonAdmin.text(), /Python Admin/);
     assert.equal(aspNetAdmin.status, 200);
     assert.match(await aspNetAdmin.text(), /ASP.NET Admin/);
+    assert.equal(documentWorkerAdmin.status, 200);
+    assert.match(await documentWorkerAdmin.text(), /Document Worker Admin/);
+    assert.equal(pythonWorkerAdmin.status, 200);
+    assert.match(await pythonWorkerAdmin.text(), /Python Worker Admin/);
+    assert.equal(searchWorkerAdmin.status, 200);
+    assert.match(await searchWorkerAdmin.text(), /Search Worker Admin/);
     assert.equal(runtimeScript.status, 200);
     assert.match(await runtimeScript.text(), /runtimeCatalog/);
+    assert.equal(workerScript.status, 200);
+    assert.match(await workerScript.text(), /workerCatalog/);
   } finally {
     server.close();
   }

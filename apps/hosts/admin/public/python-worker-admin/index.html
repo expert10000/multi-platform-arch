@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DZONE Python Worker Admin</title>
+    <link rel="stylesheet" href="/admin/styles.css">
+  </head>
+  <body data-worker-admin="python" data-worker-name="Python Worker" data-backend-url="http://localhost:3100">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">DZONE Worker Admin</p>
+        <h1>Python Worker Admin</h1>
+      </div>
+      <a class="implementation-link" href="/">Central Admin</a>
+    </header>
+    <main class="runtime-admin-shell">
+      <section class="panel runtime-admin-hero">
+        <div>
+          <p class="eyebrow">Worker Status</p>
+          <h2 id="workerTitle">Python Worker</h2>
+        </div>
+        <span class="runtime-badge" id="workerBadge">Checking</span>
+      </section>
+      <section class="runtime-admin-grid" id="workerAdminGrid"></section>
+    </main>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="/admin/worker-admin.js"></script>
+  </body>
+</html>
