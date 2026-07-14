@@ -91,6 +91,30 @@ test("backend covers every OpenAPI operation", async () => {
     coveredOperations.add("getSpringSetupStatus");
     assert.equal(springSetupStatus.host, "spring");
 
+    const pythonSetup = await api.setupPythonTooling();
+    coveredOperations.add("setupPythonTooling");
+    assert.equal(pythonSetup.host, "python");
+
+    const pythonSetupStatus = await api.getPythonToolingStatus();
+    coveredOperations.add("getPythonToolingStatus");
+    assert.equal(pythonSetupStatus.host, "python");
+
+    const dotnetSetup = await api.setupDotnetTooling();
+    coveredOperations.add("setupDotnetTooling");
+    assert.equal(dotnetSetup.host, "dotnet");
+
+    const dotnetSetupStatus = await api.getDotnetToolingStatus();
+    coveredOperations.add("getDotnetToolingStatus");
+    assert.equal(dotnetSetupStatus.host, "dotnet");
+
+    const electronDependenciesSetup = await api.setupElectronDependencies();
+    coveredOperations.add("setupElectronDependencies");
+    assert.equal(electronDependenciesSetup.host, "electron-deps");
+
+    const electronDependenciesSetupStatus = await api.getElectronDependenciesStatus();
+    coveredOperations.add("getElectronDependenciesStatus");
+    assert.equal(electronDependenciesSetupStatus.host, "electron-deps");
+
     const initialWorkspaces = await api.listWorkspaces();
     coveredOperations.add("listWorkspaces");
     assert.deepEqual(initialWorkspaces, []);
@@ -287,6 +311,48 @@ async function startServer(options) {
       java: "missing",
       maven: "missing",
       spring: "stopped",
+      lastOutput: ""
+    }),
+    setupPythonTooling: async () => ({
+      host: "python",
+      status: "starting",
+      command: "winget install Python.Python.3.11",
+      python: "missing",
+      lastOutput: ""
+    }),
+    getPythonToolingStatus: async () => ({
+      host: "python",
+      status: "idle",
+      command: "winget install Python.Python.3.11",
+      python: "missing",
+      lastOutput: ""
+    }),
+    setupDotnetTooling: async () => ({
+      host: "dotnet",
+      status: "starting",
+      command: "winget install Microsoft.DotNet.SDK.10",
+      dotnet: "missing",
+      lastOutput: ""
+    }),
+    getDotnetToolingStatus: async () => ({
+      host: "dotnet",
+      status: "idle",
+      command: "winget install Microsoft.DotNet.SDK.10",
+      dotnet: "missing",
+      lastOutput: ""
+    }),
+    setupElectronDependencies: async () => ({
+      host: "electron-deps",
+      status: "starting",
+      command: "npm --prefix apps/hosts/electron install",
+      electronDependencies: "missing",
+      lastOutput: ""
+    }),
+    getElectronDependenciesStatus: async () => ({
+      host: "electron-deps",
+      status: "idle",
+      command: "npm --prefix apps/hosts/electron install",
+      electronDependencies: "missing",
       lastOutput: ""
     })
   });

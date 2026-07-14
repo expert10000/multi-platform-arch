@@ -6,6 +6,11 @@ const state = {
   jobs: [],
   mauiSetup: null,
   springSetup: null,
+  localSetup: {
+    python: null,
+    dotnet: null,
+    electronDependencies: null
+  },
   nodeHealth: null,
   aspNetCoreHealth: null,
   pythonHealth: null,
@@ -76,6 +81,7 @@ const elements = {
   architectureDetail: document.querySelector("#architectureDetail"),
   implementationTabs: document.querySelector("#implementationTabs"),
   implementationDetail: document.querySelector("#implementationDetail"),
+  localSetupDetail: document.querySelector("#localSetupDetail"),
   centralTabs: document.querySelector("#centralTabs"),
   centralViews: document.querySelectorAll("[data-central-view]"),
   toast: document.querySelector("#toast")
@@ -135,6 +141,9 @@ window.setInterval(() => {
     if (isSpringSetupActive()) {
       await loadSpringSetupStatus();
     }
+    if (isLocalSetupActive() || state.activeCentralSection === "setup") {
+      await loadLocalSetupStatus();
+    }
     await loadRuntimeHealth();
     if (state.activeWorkspaceId) {
       await refreshActiveWorkspace();
@@ -148,6 +157,7 @@ async function initialize() {
   await loadRuntimeHealth();
   await loadMauiSetupStatus();
   await loadSpringSetupStatus();
+  await loadLocalSetupStatus();
   await loadWorkspaces();
   setDocumentFormEnabled(false);
   render();
@@ -178,6 +188,19 @@ async function loadMauiSetupStatus() {
 
 async function loadSpringSetupStatus() {
   state.springSetup = await platformApi.getSpringSetupStatus().catch(() => null);
+}
+
+async function loadLocalSetupStatus() {
+  const [python, dotnet, electronDependencies] = await Promise.all([
+    platformApi.getPythonToolingStatus().catch(() => null),
+    platformApi.getDotnetToolingStatus().catch(() => null),
+    platformApi.getElectronDependenciesStatus().catch(() => null)
+  ]);
+  state.localSetup = {
+    python,
+    dotnet,
+    electronDependencies
+  };
 }
 
 async function loadRuntimeHealth() {
@@ -273,6 +296,7 @@ function render() {
   renderCentralView();
   renderArchitecture();
   renderImplementations();
+  renderLocalSetup();
 }
 
 function renderCentralView() {
@@ -404,6 +428,149 @@ function renderImplementations() {
   elements.implementationDetail.replaceChildren(
     ...section.map((implementation) => implementationCard(implementation))
   );
+}
+
+function renderLocalSetup() {
+  if (!elements.localSetupDetail) {
+    return;
+  }
+
+  elements.localSetupDetail.replaceChildren(
+    ...localSetupSections().map((setup) => localSetupCard(setup))
+  );
+}
+
+function localSetupSections() {
+  return [
+    {
+      key: "node",
+      name: "Node.js",
+      status: nodeBackendStatus() === "Running" ? "Running" : "Manual",
+      summary: "Node starts the central dashboard, so a fresh user installs Node before opening this UI.",
+      commandText: "Install Node.js LTS, then run npm install and npm run dev",
+      facts: ["Required before this UI can run", `Runtime: ${state.runtimeName}`, "Manual first step"]
+    },
+    {
+      key: "python",
+      name: "Python Tooling",
+      status: setupCardStatus(localSetupState("python"), "python"),
+      summary: "Installs Python 3.11 for the Python backend and Python workers.",
+      setupCommand: "setupPythonTooling",
+      statusCommand: "getPythonToolingStatus",
+      setupAction: "Install / Repair Python",
+      commandText: "winget install Python.Python.3.11",
+      facts: [
+        `Python: ${localSetupState("python")?.python ?? "unknown"}`,
+        "Python backend",
+        "Python workers"
+      ]
+    },
+    {
+      key: "dotnet",
+      name: ".NET SDK",
+      status: setupCardStatus(localSetupState("dotnet"), "dotnet"),
+      summary: "Installs the .NET SDK used by ASP.NET Core, .NET Desktop, and MAUI.",
+      setupCommand: "setupDotnetTooling",
+      statusCommand: "getDotnetToolingStatus",
+      setupAction: "Install / Repair .NET SDK",
+      commandText: "winget install Microsoft.DotNet.SDK.10",
+      facts: [
+        `.NET: ${localSetupState("dotnet")?.dotnet ?? "unknown"}`,
+        "ASP.NET Core",
+        ".NET Desktop"
+      ]
+    },
+    {
+      key: "electronDependencies",
+      name: "Electron Dependencies",
+      status: setupCardStatus(localSetupState("electronDependencies"), "electronDependencies"),
+      summary: "Installs the desktop host dependencies after Node packages are restored.",
+      setupCommand: "setupElectronDependencies",
+      statusCommand: "getElectronDependenciesStatus",
+      setupAction: "Install Electron Dependencies",
+      commandText: "npm --prefix apps/hosts/electron install",
+      facts: [
+        `Electron: ${localSetupState("electronDependencies")?.electronDependencies ?? "unknown"}`,
+        "Desktop shell",
+        "Local files"
+      ]
+    },
+    {
+      key: "spring",
+      name: "Spring Boot Tooling",
+      status: setupCardStatus(state.springSetup, "spring"),
+      summary: "Installs Java 17 and Maven for the Spring Boot backend/admin.",
+      setupCommand: "setupSpringBackend",
+      statusCommand: "getSpringSetupStatus",
+      setupAction: "Install Java / Maven",
+      commandText: "winget install Microsoft.OpenJDK.17 and Apache.Maven",
+      facts: springBackendFacts()
+    },
+    {
+      key: "maui",
+      name: ".NET MAUI Workload",
+      status: setupCardStatus(state.mauiSetup, "maui"),
+      summary: "Installs the optional MAUI workload for the MAUI desktop host.",
+      setupCommand: "setupMauiHost",
+      statusCommand: "getMauiSetupStatus",
+      setupAction: "Install / Repair MAUI",
+      commandText: "dotnet workload install maui",
+      facts: [
+        `MAUI: ${state.mauiSetup?.mauiWorkload ?? state.mauiSetup?.status ?? "unknown"}`,
+        "Optional host",
+        "Shared API"
+      ]
+    }
+  ];
+}
+
+function localSetupCard(setup) {
+  const article = document.createElement("article");
+  article.className = "implementation-card";
+
+  const header = document.createElement("div");
+  header.className = "implementation-card-header";
+  const title = document.createElement("h4");
+  title.textContent = setup.name;
+  const status = document.createElement("span");
+  status.className = `runtime-badge ${setup.status.toLowerCase()}`;
+  status.textContent = setup.status;
+  header.append(title, status);
+
+  const summary = document.createElement("p");
+  summary.textContent = setup.summary;
+  article.append(header, summary);
+
+  if (setup.setupCommand) {
+    const button = document.createElement("button");
+    button.className = "implementation-link";
+    button.type = "button";
+    button.textContent = setup.setupAction;
+    button.addEventListener("click", () => setupLocalTool(setup));
+    article.append(button);
+  }
+
+  if (setup.statusCommand) {
+    const button = document.createElement("button");
+    button.className = "implementation-link";
+    button.type = "button";
+    button.textContent = "Check Status";
+    button.addEventListener("click", () => refreshLocalSetupStatus(setup));
+    article.append(button);
+  }
+
+  article.append(localSetupStatusPanel(setup));
+
+  const facts = document.createElement("div");
+  facts.className = "implementation-facts";
+  for (const fact of setup.facts) {
+    const item = document.createElement("span");
+    item.textContent = fact;
+    facts.append(item);
+  }
+  article.append(facts);
+
+  return article;
 }
 
 function implementationSections(metrics) {
@@ -657,6 +824,12 @@ function isSpringSetupActive() {
     state.springSetup?.spring === "starting";
 }
 
+function isLocalSetupActive() {
+  return Object.values(state.localSetup).some((setup) =>
+    setup?.status === "starting" || setup?.status === "running"
+  );
+}
+
 async function launchHost(command) {
   await runAction(async () => {
     const result = await platformApi[command]();
@@ -692,6 +865,7 @@ async function setupHost(command) {
     const result = await platformApi[command]();
     setSetupState(result);
     renderImplementations();
+    renderLocalSetup();
     showToast(result.status === "running" ? `${hostLabel(result.host)} is already running.` : `${hostLabel(result.host)} installer started.`);
   });
 }
@@ -700,8 +874,29 @@ async function refreshSetupStatus(command) {
   await runAction(async () => {
     setSetupState(await platformApi[command]());
     renderImplementations();
+    renderLocalSetup();
     const setup = setupStateForHost(command.includes("Spring") ? "spring" : "maui");
     showToast(`${hostLabel(setup.host)} setup is ${setup.status}.`);
+  });
+}
+
+async function setupLocalTool(setup) {
+  await runAction(async () => {
+    const result = await platformApi[setup.setupCommand]();
+    setSetupState(result);
+    renderLocalSetup();
+    renderImplementations();
+    showToast(result.status === "running" ? `${hostLabel(result.host)} installer is already running.` : `${hostLabel(result.host)} installer started.`);
+  });
+}
+
+async function refreshLocalSetupStatus(setup) {
+  await runAction(async () => {
+    const result = await platformApi[setup.statusCommand]();
+    setSetupState(result);
+    renderLocalSetup();
+    renderImplementations();
+    showToast(`${hostLabel(result.host)} setup is ${result.status}.`);
   });
 }
 
@@ -710,10 +905,31 @@ function setSetupState(result) {
     state.springSetup = result;
     return;
   }
+  if (result.host === "python") {
+    state.localSetup.python = result;
+    return;
+  }
+  if (result.host === "dotnet") {
+    state.localSetup.dotnet = result;
+    return;
+  }
+  if (result.host === "electron-deps") {
+    state.localSetup.electronDependencies = result;
+    return;
+  }
   state.mauiSetup = result;
 }
 
 function hostLabel(host) {
+  if (host === "python") {
+    return "Python";
+  }
+  if (host === "dotnet") {
+    return ".NET SDK";
+  }
+  if (host === "electron-deps") {
+    return "Electron dependencies";
+  }
   if (host === "dotnet-desktop") {
     return ".NET desktop";
   }
@@ -811,15 +1027,56 @@ function setupStatusPanel(statusView) {
   return panel;
 }
 
+function localSetupStatusPanel(setupDefinition) {
+  const setup = localSetupState(setupDefinition.key);
+  const panel = document.createElement("div");
+  panel.className = "setup-status";
+
+  const status = document.createElement("span");
+  status.className = "setup-status-label";
+  status.textContent = `Setup: ${setup?.status ?? setupDefinition.status.toLowerCase()}`;
+
+  const command = document.createElement("span");
+  command.textContent = `Command: ${setup?.command ?? setupDefinition.commandText}`;
+
+  panel.append(status, command, ...setupDetails(setup));
+
+  if (setup?.logPath || setup?.lastOutput) {
+    const details = document.createElement("details");
+    details.className = "setup-log";
+    const summary = document.createElement("summary");
+    summary.textContent = "Show installer log";
+    details.append(summary);
+    if (setup.logPath) {
+      const logPath = document.createElement("span");
+      logPath.className = "setup-log-path";
+      logPath.textContent = `Path: ${setup.logPath}`;
+      details.append(logPath);
+    }
+    if (setup.lastOutput) {
+      const output = document.createElement("pre");
+      output.textContent = setup.lastOutput;
+      details.append(output);
+    }
+    panel.append(details);
+  }
+
+  return panel;
+}
+
 function setupDetails(setup) {
   if (!setup) {
     return [];
   }
 
   const details = [
+    ["Python", setup.python],
+    [".NET", setup.dotnet],
+    ["Electron", setup.electronDependencies],
     ["Java", setup.java],
     ["Maven", setup.maven],
     ["Spring", setup.spring],
+    ["MAUI", setup.mauiWorkload],
     ["Started", setup.startedAt],
     ["Finished", setup.finishedAt],
     ["Exit", setup.exitCode === null || setup.exitCode === undefined ? null : String(setup.exitCode)]
@@ -840,6 +1097,45 @@ function setupStateForView(statusView) {
 
 function setupStateForHost(host) {
   return host === "spring" ? state.springSetup : state.mauiSetup;
+}
+
+function localSetupState(key) {
+  if (key === "spring") {
+    return state.springSetup;
+  }
+  if (key === "maui") {
+    return state.mauiSetup;
+  }
+  if (key === "electronDependencies") {
+    return state.localSetup.electronDependencies;
+  }
+  return state.localSetup[key];
+}
+
+function setupCardStatus(setup, key) {
+  if (!setup) {
+    return "Unknown";
+  }
+  if (setup.status === "starting" || setup.status === "running") {
+    return "Installing";
+  }
+  if (setup.status === "failed") {
+    return "Failed";
+  }
+  if (key === "spring") {
+    return setup.java === "installed" && setup.maven === "installed" ? "Available" : "Missing";
+  }
+  if (key === "maui") {
+    return setup.status === "completed" ? "Available" : "Available";
+  }
+  const value = setup[key];
+  if (value === "installed") {
+    return "Available";
+  }
+  if (value === "missing") {
+    return "Missing";
+  }
+  return setup.status === "completed" ? "Available" : "Unknown";
 }
 
 function defaultSetupCommand(statusView) {

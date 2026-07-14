@@ -42,6 +42,7 @@ docs/
 ## Run
 
 ```bash
+npm run check:local
 npm test
 npm start
 ```
@@ -56,6 +57,42 @@ The browser hosts call the backend through `apps/hosts/shared/public/apiClient.j
 operation names match `contracts/openapi.yaml`.
 Processing jobs are picked up by the local worker and move from `queued` to
 `running` to `completed`.
+
+## Fresh Clone Setup
+
+On Windows, check the local machine:
+
+```powershell
+npm run check:local
+```
+
+If prerequisites are missing, bootstrap the local developer machine:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-local.ps1
+```
+
+That script installs or repairs:
+
+- Node.js LTS through `winget`
+- Python 3.11 through `winget`
+- .NET SDK 10 through `winget`
+- Java 17 through `winget`
+- Maven through `winget`, with an official Apache Maven archive fallback
+- Electron host dependencies through `npm --prefix apps/hosts/electron install`
+
+The optional MAUI workload is intentionally not installed by default because it is large.
+Install it only when needed:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-local.ps1 -IncludeMaui
+```
+
+Important bootstrap boundary: Node.js must exist before the dashboard can start.
+After Node is installed, the Central Admin console can launch local runtimes.
+Its Local Setup tab can install or repair Python, .NET SDK, Electron host
+dependencies, Spring Java/Maven tooling, and the optional MAUI workload from the
+web UI.
 
 ## Backends
 
@@ -78,6 +115,14 @@ npm run start:backend:spring
 ```
 
 The Spring Boot backend listens on `http://localhost:3200` by default.
+
+Run the ASP.NET Core backend after installing the .NET SDK:
+
+```bash
+npm run start:backend:aspnet
+```
+
+The ASP.NET Core backend listens on `http://localhost:3300` by default.
 
 All backends expose the same OpenAPI route surface. The Python backend keeps
 metadata in memory and stores uploaded bytes under `data/python-files/`. The

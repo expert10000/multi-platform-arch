@@ -18,6 +18,7 @@
     <main class="central-shell">
       <nav class="central-tabs" id="centralTabs" role="tablist" aria-label="Central admin sections">
         <button class="central-tab active" type="button" role="tab" aria-selected="true" data-central-section="runtime">Runtime Admin</button>
+        <button class="central-tab" type="button" role="tab" aria-selected="false" data-central-section="setup">Local Setup</button>
         <button class="central-tab" type="button" role="tab" aria-selected="false" data-central-section="workspaces">Workspace Data</button>
       </nav>
 
@@ -47,6 +48,18 @@
             <button class="implementation-tab" type="button" role="tab" aria-selected="false" data-implementation-section="workers">Workers</button>
           </div>
           <div class="implementation-grid" id="implementationDetail" role="tabpanel" aria-live="polite"></div>
+        </section>
+      </section>
+
+      <section class="central-view" data-central-view="setup" role="tabpanel" hidden>
+        <section class="panel implementation-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Fresh Clone Setup</p>
+              <h3>Local Tooling Installers</h3>
+            </div>
+          </div>
+          <div class="implementation-grid setup-grid" id="localSetupDetail" role="tabpanel" aria-live="polite"></div>
         </section>
       </section>
 

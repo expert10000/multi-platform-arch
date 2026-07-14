@@ -154,6 +154,63 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RuntimeHostSetupResult"
+  /runtime/setup/python:
+    get:
+      operationId: getPythonToolingStatus
+      responses:
+        "200":
+          description: Python tooling setup status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeHostSetupResult"
+    post:
+      operationId: setupPythonTooling
+      responses:
+        "202":
+          description: Python tooling setup requested.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeHostSetupResult"
+  /runtime/setup/dotnet:
+    get:
+      operationId: getDotnetToolingStatus
+      responses:
+        "200":
+          description: .NET SDK setup status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeHostSetupResult"
+    post:
+      operationId: setupDotnetTooling
+      responses:
+        "202":
+          description: .NET SDK setup requested.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeHostSetupResult"
+  /runtime/setup/electron-deps:
+    get:
+      operationId: getElectronDependenciesStatus
+      responses:
+        "200":
+          description: Electron dependency setup status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeHostSetupResult"
+    post:
+      operationId: setupElectronDependencies
+      responses:
+        "202":
+          description: Electron dependency setup requested.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeHostSetupResult"
   /workspaces:
     get:
       operationId: listWorkspaces
@@ -512,7 +569,7 @@ components:
       properties:
         host:
           type: string
-          enum: [maui, spring]
+          enum: [maui, spring, python, dotnet, electron-deps]
         status:
           type: string
           enum: [idle, starting, running, completed, failed]
@@ -529,6 +586,14 @@ components:
         signal:
           type: [string, "null"]
         lastOutput:
+          type: string
+        python:
+          type: string
+        dotnet:
+          type: string
+        electronDependencies:
+          type: string
+        mauiWorkload:
           type: string
         java:
           type: string

@@ -101,9 +101,9 @@ h3 {
 
 .central-tabs {
   display: grid;
-  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
   gap: 8px;
-  width: min(460px, 100%);
+  width: min(640px, 100%);
 }
 
 .central-tab {
@@ -459,6 +459,17 @@ button:focus-visible {
 }
 
 .runtime-badge.missing {
+  background: #fff1f1;
+  color: var(--danger);
+}
+
+.runtime-badge.manual,
+.runtime-badge.unknown {
+  background: #eef2f4;
+  color: var(--muted);
+}
+
+.runtime-badge.failed {
   background: #fff1f1;
   color: var(--danger);
 }

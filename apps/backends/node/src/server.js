@@ -16,8 +16,14 @@ const aspNetCoreBackendRoot = fileURLToPath(new URL("../../aspnet-core/", import
 const repoRoot = fileURLToPath(new URL("../../../../", import.meta.url));
 const mauiInstallScript = fileURLToPath(new URL("../../../../scripts/install-maui-workload.ps1", import.meta.url));
 const springInstallScript = fileURLToPath(new URL("../../../../scripts/install-spring-tooling.ps1", import.meta.url));
+const pythonInstallScript = fileURLToPath(new URL("../../../../scripts/install-python-tooling.ps1", import.meta.url));
+const dotnetInstallScript = fileURLToPath(new URL("../../../../scripts/install-dotnet-tooling.ps1", import.meta.url));
+const electronDepsInstallScript = fileURLToPath(new URL("../../../../scripts/install-electron-deps.ps1", import.meta.url));
 const defaultMauiSetupLog = fileURLToPath(new URL("../../../../data/runtime/maui-setup.log", import.meta.url));
 const defaultSpringSetupLog = fileURLToPath(new URL("../../../../data/runtime/spring-setup.log", import.meta.url));
+const defaultPythonSetupLog = fileURLToPath(new URL("../../../../data/runtime/python-setup.log", import.meta.url));
+const defaultDotnetSetupLog = fileURLToPath(new URL("../../../../data/runtime/dotnet-setup.log", import.meta.url));
+const defaultElectronDepsSetupLog = fileURLToPath(new URL("../../../../data/runtime/electron-deps-setup.log", import.meta.url));
 const defaultFileStorageRoot = fileURLToPath(new URL("../../../../data/files/", import.meta.url));
 
 export function createServer(
@@ -39,7 +45,13 @@ export function createServer(
     setupSpringBackend,
     getSpringSetupStatus,
     launchAspNetCoreBackend,
-    closeAspNetCoreBackend
+    closeAspNetCoreBackend,
+    setupPythonTooling,
+    getPythonToolingStatus,
+    setupDotnetTooling,
+    getDotnetToolingStatus,
+    setupElectronDependencies,
+    getElectronDependenciesStatus
   } = options;
   const electronHostController =
     launchElectronHost || closeElectronHost
@@ -82,6 +94,33 @@ export function createServer(
           closeAspNetCoreBackend: closeAspNetCoreBackend ?? defaultCloseAspNetCoreBackend
         }
       : createAspNetCoreBackendController();
+  const defaultPythonSetupRunner = createToolSetupRunner({
+    host: "python",
+    command: "winget install Python.Python.3.11",
+    scriptPath: pythonInstallScript,
+    logPath: defaultPythonSetupLog,
+    checks: { python: () => commandAvailable("python") }
+  });
+  const pythonSetup = setupPythonTooling ?? defaultPythonSetupRunner;
+  const pythonSetupStatus = getPythonToolingStatus ?? defaultPythonSetupRunner.status;
+  const defaultDotnetSetupRunner = createToolSetupRunner({
+    host: "dotnet",
+    command: "winget install Microsoft.DotNet.SDK.10",
+    scriptPath: dotnetInstallScript,
+    logPath: defaultDotnetSetupLog,
+    checks: { dotnet: () => commandAvailable("dotnet") }
+  });
+  const dotnetSetup = setupDotnetTooling ?? defaultDotnetSetupRunner;
+  const dotnetSetupStatus = getDotnetToolingStatus ?? defaultDotnetSetupRunner.status;
+  const defaultElectronDepsSetupRunner = createToolSetupRunner({
+    host: "electron-deps",
+    command: "npm --prefix apps/hosts/electron install",
+    scriptPath: electronDepsInstallScript,
+    logPath: defaultElectronDepsSetupLog,
+    checks: { electronDependencies: electronDependenciesState }
+  });
+  const electronDepsSetup = setupElectronDependencies ?? defaultElectronDepsSetupRunner;
+  const electronDepsSetupStatus = getElectronDependenciesStatus ?? defaultElectronDepsSetupRunner.status;
   const service = platform.services.documents;
 
   return createHttpServer(async (request, response) => {
@@ -135,6 +174,30 @@ export function createServer(
 
       if (method === "GET" && path === "/runtime/backends/spring/setup") {
         return sendJson(response, 200, await springSetupStatus());
+      }
+
+      if (method === "POST" && path === "/runtime/setup/python") {
+        return sendJson(response, 202, await pythonSetup());
+      }
+
+      if (method === "GET" && path === "/runtime/setup/python") {
+        return sendJson(response, 200, await pythonSetupStatus());
+      }
+
+      if (method === "POST" && path === "/runtime/setup/dotnet") {
+        return sendJson(response, 202, await dotnetSetup());
+      }
+
+      if (method === "GET" && path === "/runtime/setup/dotnet") {
+        return sendJson(response, 200, await dotnetSetupStatus());
+      }
+
+      if (method === "POST" && path === "/runtime/setup/electron-deps") {
+        return sendJson(response, 202, await electronDepsSetup());
+      }
+
+      if (method === "GET" && path === "/runtime/setup/electron-deps") {
+        return sendJson(response, 200, await electronDepsSetupStatus());
       }
 
       if (method === "POST" && path === "/runtime/backends/spring/open") {
@@ -618,6 +681,106 @@ export function createSpringBackendController({
   };
 }
 
+export function createToolSetupRunner({
+  host,
+  command,
+  scriptPath,
+  workingDirectory = repoRoot,
+  logPath,
+  spawnProcess = spawn,
+  isProcessRunning = isChildProcessRunning,
+  now = () => new Date(),
+  checks = {}
+} = {}) {
+  let setupProcess = null;
+  let state = {
+    host,
+    status: "idle",
+    command,
+    logPath,
+    startedAt: null,
+    finishedAt: null,
+    exitCode: null,
+    signal: null,
+    lastOutput: ""
+  };
+
+  async function setupTooling() {
+    if (isProcessRunning(setupProcess)) {
+      return setupStatus("running");
+    }
+    setupProcess = null;
+
+    await mkdir(dirname(logPath), { recursive: true });
+    await appendLog(logPath, `\n[${host}] Setup requested at ${now().toISOString()}\n`);
+    state = {
+      ...state,
+      status: "starting",
+      startedAt: now().toISOString(),
+      finishedAt: null,
+      exitCode: null,
+      signal: null,
+      lastOutput: ""
+    };
+
+    setupProcess = spawnProcess(setupExecutable(), setupArgs(scriptPath), {
+      cwd: workingDirectory,
+      detached: false,
+      shell: false,
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true
+    });
+    await appendLog(logPath, `[${host}] Setup process started${setupProcess.pid ? ` with pid ${setupProcess.pid}` : ""}\n`);
+    captureInstallerOutput(setupProcess.stdout, logPath, (text) => updateLastOutput(text));
+    captureInstallerOutput(setupProcess.stderr, logPath, (text) => updateLastOutput(text));
+    setupProcess.once?.("close", async (exitCode, signal) => {
+      const finishedAt = now().toISOString();
+      const status = exitCode === 0 ? "completed" : "failed";
+      state = {
+        ...state,
+        status,
+        finishedAt,
+        exitCode,
+        signal
+      };
+      await appendLog(logPath, `[${host}] Setup ${status} at ${finishedAt} (exit ${exitCode ?? "none"}${signal ? `, signal ${signal}` : ""})\n`);
+      setupProcess = null;
+    });
+
+    return setupStatus("starting");
+  }
+
+  async function setupStatus(statusOverride) {
+    const running = isProcessRunning(setupProcess);
+    const checkEntries = await Promise.all(
+      Object.entries(checks).map(async ([key, check]) => [key, await check()])
+    );
+    const checkState = Object.fromEntries(checkEntries);
+    const lastOutput = await readLogTail(logPath);
+    const ready = checkEntries.length > 0 && checkEntries.every(([, value]) => value === "installed");
+    const status = statusOverride ?? (running ? "running" : ready ? "completed" : state.status);
+    state = {
+      ...state,
+      ...checkState,
+      lastOutput
+    };
+    return {
+      ...state,
+      status
+    };
+  }
+
+  function updateLastOutput(text) {
+    state = {
+      ...state,
+      lastOutput: trimLog(`${state.lastOutput}${text}`)
+    };
+  }
+
+  setupTooling.status = setupStatus;
+  return setupTooling;
+}
+
 export function createAspNetCoreBackendController({
   workingDirectory = aspNetCoreBackendRoot,
   spawnProcess = spawn,
@@ -738,6 +901,14 @@ function springSetupArgs(scriptPath) {
   return ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptPath];
 }
 
+function setupExecutable() {
+  return process.platform === "win32" ? "powershell.exe" : "pwsh";
+}
+
+function setupArgs(scriptPath) {
+  return ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptPath];
+}
+
 function spawnSpringBackend(workingDirectory, spawnProcess) {
   const command = springBackendCommand();
   return spawnProcess(command.file, command.args, {
@@ -819,6 +990,12 @@ async function aspNetCoreRuntimeState() {
   } catch {
     return "stopped";
   }
+}
+
+async function electronDependenciesState() {
+  return existsSync(join(electronHostRoot, "node_modules", "electron"))
+    ? "installed"
+    : "missing";
 }
 
 function captureInstallerOutput(stream, logPath, onOutput) {

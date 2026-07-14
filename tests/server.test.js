@@ -12,6 +12,7 @@ import {
   createAspNetCoreBackendController,
   createSpringBackendController,
   createSpringSetupRunner,
+  createToolSetupRunner,
   createServer
 } from "../apps/backends/node/src/server.js";
 import { createPlatformApi } from "../apps/hosts/shared/public/apiClient.js";
@@ -280,6 +281,83 @@ test("reports and runs Spring backend setup through the backend", async () => {
     assert.equal(status.maven, "missing");
     assert.equal(status.spring, "stopped");
     assert.equal(setups.length, 1);
+  } finally {
+    server.close();
+  }
+});
+
+test("reports and runs local tooling setup through the backend", async () => {
+  const setups = [];
+  const { server, baseUrl } = await startServer({
+    setupPythonTooling: async () => {
+      setups.push("python");
+      return {
+        host: "python",
+        status: "starting",
+        command: "winget install Python.Python.3.11",
+        python: "missing",
+        lastOutput: ""
+      };
+    },
+    getPythonToolingStatus: async () => ({
+      host: "python",
+      status: "idle",
+      command: "winget install Python.Python.3.11",
+      python: "missing",
+      lastOutput: ""
+    }),
+    setupDotnetTooling: async () => {
+      setups.push("dotnet");
+      return {
+        host: "dotnet",
+        status: "starting",
+        command: "winget install Microsoft.DotNet.SDK.10",
+        dotnet: "missing",
+        lastOutput: ""
+      };
+    },
+    getDotnetToolingStatus: async () => ({
+      host: "dotnet",
+      status: "idle",
+      command: "winget install Microsoft.DotNet.SDK.10",
+      dotnet: "missing",
+      lastOutput: ""
+    }),
+    setupElectronDependencies: async () => {
+      setups.push("electron-deps");
+      return {
+        host: "electron-deps",
+        status: "starting",
+        command: "npm --prefix apps/hosts/electron install",
+        electronDependencies: "missing",
+        lastOutput: ""
+      };
+    },
+    getElectronDependenciesStatus: async () => ({
+      host: "electron-deps",
+      status: "idle",
+      command: "npm --prefix apps/hosts/electron install",
+      electronDependencies: "missing",
+      lastOutput: ""
+    })
+  });
+  const api = createPlatformApi({ baseUrl });
+
+  try {
+    const python = await api.setupPythonTooling();
+    const pythonStatus = await api.getPythonToolingStatus();
+    const dotnet = await api.setupDotnetTooling();
+    const dotnetStatus = await api.getDotnetToolingStatus();
+    const electronDependencies = await api.setupElectronDependencies();
+    const electronDependenciesStatus = await api.getElectronDependenciesStatus();
+
+    assert.equal(python.host, "python");
+    assert.equal(pythonStatus.python, "missing");
+    assert.equal(dotnet.host, "dotnet");
+    assert.equal(dotnetStatus.dotnet, "missing");
+    assert.equal(electronDependencies.host, "electron-deps");
+    assert.equal(electronDependenciesStatus.electronDependencies, "missing");
+    assert.deepEqual(setups, ["python", "dotnet", "electron-deps"]);
   } finally {
     server.close();
   }
@@ -644,6 +722,55 @@ test("Spring setup runner reports tool state and starts installer once", async (
     assert.deepEqual(launches[0].args.slice(0, 3), ["-NoProfile", "-ExecutionPolicy", "Bypass"]);
     assert.equal(launches[0].args[3], "-File");
     assert.match(launches[0].args[4], /install-spring-tooling\.ps1$/);
+    assert.equal(launches[0].options.detached, false);
+    assert.equal(launches[0].options.shell, false);
+    assert.deepEqual(launches[0].options.stdio, ["ignore", "pipe", "pipe"]);
+    assert.equal(launches[0].options.windowsHide, true);
+  } finally {
+    await rm(setupRoot, { recursive: true, force: true });
+  }
+});
+
+test("generic tool setup runner reports tool state and starts installer once", async () => {
+  const setupRoot = await mkdtemp(join(tmpdir(), "dzone-tool-setup-"));
+  const launches = [];
+  const runner = createToolSetupRunner({
+    host: "python",
+    command: "winget install Python.Python.3.11",
+    scriptPath: join(setupRoot, "install-python-tooling.ps1"),
+    workingDirectory: setupRoot,
+    logPath: join(setupRoot, "python-setup.log"),
+    spawnProcess: (file, args, options) => {
+      launches.push({ file, args, options });
+      return {
+        exitCode: null,
+        signalCode: null,
+        pid: 6543,
+        once() {
+          return undefined;
+        }
+      };
+    },
+    isProcessRunning: (childProcess) => Boolean(childProcess),
+    checks: {
+      python: async () => "installed"
+    }
+  });
+
+  try {
+    const firstSetup = await runner();
+    const secondSetup = await runner();
+    const status = await runner.status();
+
+    assert.equal(firstSetup.status, "starting");
+    assert.equal(secondSetup.status, "running");
+    assert.equal(status.status, "running");
+    assert.equal(status.python, "installed");
+    assert.equal(launches.length, 1);
+    assert.match(launches[0].file, process.platform === "win32" ? /powershell\.exe$/ : /pwsh$/);
+    assert.deepEqual(launches[0].args.slice(0, 3), ["-NoProfile", "-ExecutionPolicy", "Bypass"]);
+    assert.equal(launches[0].args[3], "-File");
+    assert.match(launches[0].args[4], /install-python-tooling\.ps1$/);
     assert.equal(launches[0].options.detached, false);
     assert.equal(launches[0].options.shell, false);
     assert.deepEqual(launches[0].options.stdio, ["ignore", "pipe", "pipe"]);
