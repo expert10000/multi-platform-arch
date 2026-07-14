@@ -94,6 +94,30 @@ Its Local Setup tab can install or repair Python, .NET SDK, Electron host
 dependencies, Spring Java/Maven tooling, and the optional MAUI workload from the
 web UI.
 
+### Fresh Computer Smoke Test
+
+Expected first run on another Windows computer:
+
+```powershell
+git clone https://github.com/expert10000/multi-platform-arch.git
+cd multi-platform-arch
+npm install
+npm run start:backend:node
+```
+
+Then open `http://localhost:3000/` and use the Central Admin **Local Setup** tab.
+From there, install or repair Python, .NET SDK, Electron dependencies,
+Spring Java/Maven tooling, and MAUI as needed.
+
+Requirements and caveats:
+
+- Node.js must be installed before this dashboard can run.
+- Internet access is required for `winget`, Maven fallback downloads, and npm installs.
+- `winget` should be available for automatic Windows tool installs.
+- PowerShell script execution must be allowed for the setup scripts.
+- Some installers may ask for administrator or UAC approval.
+- If an installer changes `PATH`, restart the terminal before retrying a runtime.
+
 ## Backends
 
 Run the Node backend and bundled web host:
