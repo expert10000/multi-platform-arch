@@ -146,10 +146,19 @@ test("backend covers every OpenAPI operation", async () => {
     assert.equal(fetchedDocument.id, document.id);
 
     const updatedDocument = await api.updateDocument(document.id, {
-      status: "review"
+      title: "Shared Plan",
+      status: "review",
+      tags: ["electron", "shared"]
     });
     coveredOperations.add("updateDocument");
     assert.equal(updatedDocument.status, "review");
+
+    const secondClient = createPlatformApi({ baseUrl });
+    const [visibleDocument] = await secondClient.listDocuments(workspace.id);
+    assert.equal(visibleDocument.id, document.id);
+    assert.equal(visibleDocument.title, "Shared Plan");
+    assert.equal(visibleDocument.status, "review");
+    assert.deepEqual(visibleDocument.tags, ["electron", "shared"]);
 
     const upload = await api.uploadDocumentFile(
       document.id,

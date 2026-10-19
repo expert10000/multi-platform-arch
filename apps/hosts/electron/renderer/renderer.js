@@ -2,7 +2,7 @@ import { createPlatformApi } from "../../shared/public/apiClient.js";
 
 const backendStorageKey = "dzoneElectronBackendUrl";
 const query = new URLSearchParams(window.location.search);
-let backendUrl = localStorage.getItem(backendStorageKey) || query.get("backendUrl") || "http://localhost:3000";
+let backendUrl = query.get("backendUrl") || localStorage.getItem(backendStorageKey) || "http://localhost:3000";
 let platformApi = createPlatformApi({ baseUrl: backendUrl });
 
 const state = {
@@ -32,6 +32,12 @@ const elements = {
   documentTags: document.querySelector("#documentTags"),
   documentList: document.querySelector("#documentList"),
   documentEmpty: document.querySelector("#documentEmpty"),
+  editDocumentDialog: document.querySelector("#editDocumentDialog"),
+  editDocumentForm: document.querySelector("#editDocumentForm"),
+  editDocumentTitle: document.querySelector("#editDocumentTitle"),
+  editDocumentStatus: document.querySelector("#editDocumentStatus"),
+  editDocumentTags: document.querySelector("#editDocumentTags"),
+  cancelEditButton: document.querySelector("#cancelEditButton"),
   jobList: document.querySelector("#jobList"),
   refreshButton: document.querySelector("#refreshButton"),
   toast: document.querySelector("#toast")
@@ -61,6 +67,13 @@ elements.documentForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   await runAction(() => createDocument(new FormData(elements.documentForm)));
 });
+
+elements.editDocumentForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await runAction(() => saveDocument(new FormData(elements.editDocumentForm)));
+});
+
+elements.cancelEditButton.addEventListener("click", () => elements.editDocumentDialog.close());
 
 elements.refreshButton.addEventListener("click", async () => {
   await runAction(async () => {
@@ -175,6 +188,31 @@ async function createDocument(formData) {
   showToast("Document added.");
 }
 
+async function editDocument(documentId) {
+  const documentItem = await platformApi.getDocument(documentId);
+  elements.editDocumentForm.dataset.documentId = documentId;
+  elements.editDocumentTitle.value = documentItem.title;
+  elements.editDocumentStatus.value = documentItem.status;
+  elements.editDocumentTags.value = documentItem.tags.join(", ");
+  elements.editDocumentDialog.showModal();
+  elements.editDocumentTitle.focus();
+}
+
+async function saveDocument(formData) {
+  const documentId = elements.editDocumentForm.dataset.documentId;
+  const updatedDocument = await platformApi.updateDocument(documentId, {
+    title: String(formData.get("title") ?? "").trim(),
+    status: formData.get("status"),
+    tags: parseTags(formData.get("tags"))
+  });
+  elements.editDocumentDialog.close();
+  state.documents = state.documents.map((documentItem) =>
+    documentItem.id === documentId ? updatedDocument : documentItem
+  );
+  render();
+  showToast("Document updated.");
+}
+
 async function selectWorkspace(workspaceId) {
   state.activeWorkspaceId = workspaceId;
   await refreshActiveWorkspace();
@@ -261,7 +299,7 @@ function documentRow(documentItem) {
 
   const actions = document.createElement("div");
   actions.className = "row-actions";
-  actions.append(uploadLabel(documentItem.id), processButton(documentItem.id));
+  actions.append(editButton(documentItem.id), uploadLabel(documentItem.id), processButton(documentItem.id));
 
   row.append(main, tags, statusBadge(documentItem.status), actions);
   return row;
@@ -298,6 +336,15 @@ function uploadLabel(documentId) {
   });
   label.append(input);
   return label;
+}
+
+function editButton(documentId) {
+  const button = document.createElement("button");
+  button.className = "secondary";
+  button.type = "button";
+  button.textContent = "Edit";
+  button.addEventListener("click", () => runAction(() => editDocument(documentId)));
+  return button;
 }
 
 function processButton(documentId) {

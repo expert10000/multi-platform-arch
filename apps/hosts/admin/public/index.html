@@ -20,6 +20,7 @@
         <button class="central-tab active" type="button" role="tab" aria-selected="true" data-central-section="runtime">Runtime Admin</button>
         <button class="central-tab" type="button" role="tab" aria-selected="false" data-central-section="setup">Local Setup</button>
         <button class="central-tab" type="button" role="tab" aria-selected="false" data-central-section="workspaces">Workspace Data</button>
+        <button class="central-tab" type="button" role="tab" aria-selected="false" data-central-section="flow">Document Flow</button>
       </nav>
 
       <section class="central-view active" data-central-view="runtime" role="tabpanel">
@@ -160,6 +161,70 @@
               <div class="job-list" id="jobList"></div>
             </section>
           </section>
+        </div>
+      </section>
+
+      <section class="central-view flow-view" data-central-view="flow" role="tabpanel" hidden>
+        <div class="flow-header">
+          <div>
+            <p class="eyebrow">Cross-Host Document Flow</p>
+            <h2>Electron to .NET MAUI</h2>
+            <p class="flow-backend" id="flowBackendUrl"></p>
+          </div>
+          <button class="primary" id="runFlowDemo" type="button">Run Demo</button>
+        </div>
+
+        <div class="flow-steps" role="group" aria-label="Document flow steps">
+          <button class="flow-step" id="prepareFlowDemo" type="button">
+            <span class="flow-step-number">1</span>
+            <span><strong>Prepare document</strong><small id="prepareFlowStatus">Ready</small></span>
+          </button>
+          <button class="flow-step" id="updateFlowDemo" type="button" disabled>
+            <span class="flow-step-number">2</span>
+            <span><strong>Send update</strong><small id="updateFlowStatus">Waiting</small></span>
+          </button>
+          <button class="flow-step" id="readFlowDemo" type="button" disabled>
+            <span class="flow-step-number">3</span>
+            <span><strong>Read result</strong><small id="readFlowStatus">Waiting</small></span>
+          </button>
+        </div>
+
+        <div class="flow-lanes">
+          <section class="flow-lane">
+            <div class="flow-lane-heading">
+              <h3>Electron write path</h3>
+              <button class="ghost" id="openFlowElectron" type="button">Launch Electron</button>
+            </div>
+            <dl class="flow-values">
+              <div><dt>Workspace</dt><dd id="flowWorkspace">-</dd></div>
+              <div><dt>Document</dt><dd id="flowElectronTitle">-</dd></div>
+              <div><dt>Status</dt><dd id="flowElectronStatus">-</dd></div>
+            </dl>
+          </section>
+          <section class="flow-lane">
+            <div class="flow-lane-heading"><h3>Shared API</h3></div>
+            <dl class="flow-values">
+              <div><dt>Runtime</dt><dd id="flowRuntime">-</dd></div>
+              <div><dt>Request</dt><dd id="flowRequest">-</dd></div>
+              <div><dt>Resource ID</dt><dd id="flowDocumentId">-</dd></div>
+            </dl>
+          </section>
+          <section class="flow-lane">
+            <div class="flow-lane-heading">
+              <h3>.NET MAUI read path</h3>
+              <button class="ghost" id="openFlowMaui" type="button">Launch MAUI</button>
+            </div>
+            <dl class="flow-values">
+              <div><dt>Document</dt><dd id="flowMauiTitle">-</dd></div>
+              <div><dt>Status</dt><dd id="flowMauiStatus">-</dd></div>
+              <div><dt>Updated</dt><dd id="flowMauiUpdated">-</dd></div>
+            </dl>
+          </section>
+        </div>
+
+        <div class="flow-footer">
+          <p id="flowMessage" role="status" aria-live="polite">Ready to prepare a document.</p>
+          <button class="ghost" id="viewFlowWorkspace" type="button" disabled>View Workspace Data</button>
         </div>
       </section>
     </main>

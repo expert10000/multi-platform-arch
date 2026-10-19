@@ -14,12 +14,15 @@
                            FontSize="28"
                            FontAttributes="Bold"
                            TextColor="#182128" />
-                    <Label Text="Optional .NET MAUI desktop host using the shared platform contract."
-                           FontSize="15"
-                           TextColor="#5E6B78" />
-                    <Label x:Name="BackendUrlLabel"
-                           FontSize="13"
-                           TextColor="#245A8D" />
+                    <Label Text="Backend" FontSize="13" TextColor="#5E6B78" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <Entry x:Name="BackendUrlEntry"
+                               Grid.Column="0"
+                               Keyboard="Url"
+                               Placeholder="http://localhost:3000"
+                               SemanticProperties.Description="Backend URL used by this desktop host" />
+                        <Button Grid.Column="1" Text="Connect" Clicked="OnConnectClicked" />
+                    </Grid>
                 </VerticalStackLayout>
             </Border>
 
@@ -76,6 +79,28 @@
                            TextColor="#182128" />
                 </VerticalStackLayout>
             </Border>
+
+            <VerticalStackLayout Spacing="10">
+                <Label Text="Documents" FontSize="20" FontAttributes="Bold" TextColor="#182128" />
+                <Label x:Name="NoDocumentsLabel" Text="No documents yet." TextColor="#5E6B78" />
+                <VerticalStackLayout x:Name="DocumentList" Spacing="8">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate>
+                            <Border BackgroundColor="#FFFFFF" Padding="14">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="8" />
+                                </Border.StrokeShape>
+                                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="5">
+                                    <Label Text="{Binding Title}" FontAttributes="Bold" FontSize="16" TextColor="#182128" />
+                                    <Label Grid.Column="1" Text="{Binding Status}" TextColor="#17633B" FontAttributes="Bold" />
+                                    <Label Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding WorkspaceName}" TextColor="#5E6B78" />
+                                    <Label Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding UpdatedText}" FontSize="12" TextColor="#5E6B78" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

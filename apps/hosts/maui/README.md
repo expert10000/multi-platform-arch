@@ -40,4 +40,7 @@ npm run start:host:maui
 ```
 
 By default it talks to `http://localhost:3000`. Set `DZONE_BACKEND_URL` to point
-it at another compatible backend.
+it at another compatible backend, or enter the URL in the app and press Connect.
+The selected URL is remembered on that machine. The document list refreshes
+every 3.5 seconds while the page is visible. Point Electron and MAUI at the
+same backend URL to see Electron document edits appear in MAUI.

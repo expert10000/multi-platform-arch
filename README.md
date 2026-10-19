@@ -165,6 +165,19 @@ tooling are preferred. Desktop hosts should not be hardwired to one backend:
 keep `DZONE_BACKEND_URL` as the switch so a desktop can use Node locally or
 Spring Boot when connected to a shared service.
 
+For cross-host document updates, point Electron and MAUI at the same backend
+URL. Electron can edit document metadata; MAUI refreshes its document list
+while open. The backends currently have separate data stores, so choosing
+different backend URLs does not synchronize their documents. Node persists
+locally in SQLite; Spring Boot and ASP.NET Core currently keep metadata in
+memory.
+
+The Central Admin **Document Flow** tab runs a sample create, update, and
+second-client read against the backend serving the dashboard. The individual
+step buttons expose each request, and the launch buttons open Electron and
+MAUI on that same backend when their local tooling is installed. Re-running
+the demo reuses its `Cross-Host Demo` workspace and tagged sample document.
+
 ## Hosts
 
 Run the default lightweight .NET desktop host:

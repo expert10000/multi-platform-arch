@@ -94,6 +94,33 @@
       </section>
     </main>
 
+    <dialog class="edit-dialog" id="editDocumentDialog" aria-labelledby="editDocumentHeading">
+      <form class="edit-document-form" id="editDocumentForm">
+        <h2 id="editDocumentHeading">Edit Document</h2>
+        <label>
+          Title
+          <input id="editDocumentTitle" name="title" required autocomplete="off">
+        </label>
+        <label>
+          Status
+          <select id="editDocumentStatus" name="status">
+            <option value="draft">Draft</option>
+            <option value="review">Review</option>
+            <option value="approved">Approved</option>
+            <option value="archived">Archived</option>
+          </select>
+        </label>
+        <label>
+          Tags
+          <input id="editDocumentTags" name="tags" autocomplete="off" placeholder="desktop, review">
+        </label>
+        <div class="edit-actions">
+          <button class="secondary" id="cancelEditButton" type="button">Cancel</button>
+          <button type="submit">Save Changes</button>
+        </div>
+      </form>
+    </dialog>
+
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script type="module" src="./renderer.js"></script>
   </body>

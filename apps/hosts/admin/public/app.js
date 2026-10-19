@@ -15,6 +15,15 @@ const state = {
   aspNetCoreHealth: null,
   pythonHealth: null,
   runtimeName: "unknown",
+  flowDemo: {
+    workspace: null,
+    document: null,
+    observed: null,
+    stage: 0,
+    busy: false,
+    request: "-",
+    message: "Ready to prepare a document."
+  },
   activeWorkspaceId: null,
   activeCentralSection: "runtime",
   activeArchitectureSection: "models",
@@ -57,6 +66,7 @@ const architectureSections = {
 const nodeApi = createPlatformApi({ baseUrl: "http://localhost:3000" });
 const aspNetCoreApi = createPlatformApi({ baseUrl: "http://localhost:3300" });
 const pythonApi = createPlatformApi({ baseUrl: "http://localhost:3100" });
+const flowReadApi = createPlatformApi({ baseUrl: window.location.origin });
 
 const elements = {
   runtimeStatus: document.querySelector("#runtimeStatus"),
@@ -82,6 +92,27 @@ const elements = {
   implementationTabs: document.querySelector("#implementationTabs"),
   implementationDetail: document.querySelector("#implementationDetail"),
   localSetupDetail: document.querySelector("#localSetupDetail"),
+  flowBackendUrl: document.querySelector("#flowBackendUrl"),
+  runFlowDemo: document.querySelector("#runFlowDemo"),
+  prepareFlowDemo: document.querySelector("#prepareFlowDemo"),
+  updateFlowDemo: document.querySelector("#updateFlowDemo"),
+  readFlowDemo: document.querySelector("#readFlowDemo"),
+  prepareFlowStatus: document.querySelector("#prepareFlowStatus"),
+  updateFlowStatus: document.querySelector("#updateFlowStatus"),
+  readFlowStatus: document.querySelector("#readFlowStatus"),
+  openFlowElectron: document.querySelector("#openFlowElectron"),
+  openFlowMaui: document.querySelector("#openFlowMaui"),
+  flowWorkspace: document.querySelector("#flowWorkspace"),
+  flowElectronTitle: document.querySelector("#flowElectronTitle"),
+  flowElectronStatus: document.querySelector("#flowElectronStatus"),
+  flowRuntime: document.querySelector("#flowRuntime"),
+  flowRequest: document.querySelector("#flowRequest"),
+  flowDocumentId: document.querySelector("#flowDocumentId"),
+  flowMauiTitle: document.querySelector("#flowMauiTitle"),
+  flowMauiStatus: document.querySelector("#flowMauiStatus"),
+  flowMauiUpdated: document.querySelector("#flowMauiUpdated"),
+  flowMessage: document.querySelector("#flowMessage"),
+  viewFlowWorkspace: document.querySelector("#viewFlowWorkspace"),
   centralTabs: document.querySelector("#centralTabs"),
   centralViews: document.querySelectorAll("[data-central-view]"),
   toast: document.querySelector("#toast")
@@ -104,6 +135,32 @@ elements.refreshButton.addEventListener("click", async () => {
     showToast("Workspace refreshed.");
   });
 });
+
+elements.runFlowDemo.addEventListener("click", () => runFlowAction(async () => {
+  await prepareFlowDemo();
+  await new Promise((resolve) => window.setTimeout(resolve, 700));
+  await updateFlowDemo();
+  await new Promise((resolve) => window.setTimeout(resolve, 700));
+  await readFlowDemo();
+}));
+
+elements.prepareFlowDemo.addEventListener("click", () => runFlowAction(prepareFlowDemo));
+elements.updateFlowDemo.addEventListener("click", () => runFlowAction(updateFlowDemo));
+elements.readFlowDemo.addEventListener("click", () => runFlowAction(readFlowDemo));
+elements.openFlowElectron.addEventListener("click", () => runAction(async () => {
+  await platformApi.launchElectronHost();
+  showToast("Electron launched on this backend.");
+}));
+elements.openFlowMaui.addEventListener("click", () => runAction(async () => {
+  await platformApi.launchMauiHost();
+  showToast("MAUI launched on this backend.");
+}));
+elements.viewFlowWorkspace.addEventListener("click", () => runAction(async () => {
+  state.activeWorkspaceId = state.flowDemo.workspace.id;
+  state.activeCentralSection = "workspaces";
+  await loadWorkspaces();
+  render();
+}));
 
 elements.centralTabs.addEventListener("click", (event) => {
   const button = event.target.closest("[data-central-section]");
@@ -297,6 +354,7 @@ function render() {
   renderArchitecture();
   renderImplementations();
   renderLocalSetup();
+  renderFlowDemo();
 }
 
 function renderCentralView() {
@@ -311,6 +369,121 @@ function renderCentralView() {
     view.classList.toggle("active", isActive);
     view.hidden = !isActive;
   }
+}
+
+async function runFlowAction(action) {
+  if (state.flowDemo.busy) {
+    return;
+  }
+
+  state.flowDemo.busy = true;
+  renderFlowDemo();
+  try {
+    await action();
+  } catch (error) {
+    state.flowDemo.message = error.message || "Document flow failed.";
+    showToast(state.flowDemo.message);
+  } finally {
+    state.flowDemo.busy = false;
+    renderFlowDemo();
+  }
+}
+
+async function prepareFlowDemo() {
+  const demo = state.flowDemo;
+  const workspaces = await platformApi.listWorkspaces();
+  let workspace = workspaces.find((item) => item.name === "Cross-Host Demo");
+  if (!workspace) {
+    workspace = await platformApi.createWorkspace({ name: "Cross-Host Demo" });
+  }
+
+  const documents = await platformApi.listDocuments(workspace.id);
+  let documentItem = documents.find((item) => item.tags?.includes("cross-host-demo"));
+  const reusedDocument = Boolean(documentItem);
+  if (documentItem) {
+    documentItem = await platformApi.updateDocument(documentItem.id, {
+      title: "Project Plan",
+      status: "draft",
+      tags: ["cross-host-demo"]
+    });
+  } else {
+    documentItem = await platformApi.createDocument({
+      workspaceId: workspace.id,
+      title: "Project Plan",
+      status: "draft",
+      tags: ["cross-host-demo"]
+    });
+  }
+
+  demo.workspace = workspace;
+  demo.document = documentItem;
+  demo.observed = null;
+  demo.stage = 1;
+  demo.request = reusedDocument ? "PUT /documents/{id}" : "POST /documents";
+  demo.message = "Draft document prepared in the shared backend.";
+  renderFlowDemo();
+}
+
+async function updateFlowDemo() {
+  const demo = state.flowDemo;
+  if (!demo.document) {
+    throw new Error("Prepare the document first.");
+  }
+
+  demo.document = await platformApi.updateDocument(demo.document.id, {
+    title: "Project Plan - Updated",
+    status: "review",
+    tags: ["cross-host-demo", "electron"]
+  });
+  demo.stage = 2;
+  demo.request = "PUT /documents/{id}";
+  demo.message = "Update stored. The read step checks what another client sees.";
+  renderFlowDemo();
+}
+
+async function readFlowDemo() {
+  const demo = state.flowDemo;
+  if (!demo.workspace || demo.stage < 2) {
+    throw new Error("Send the update first.");
+  }
+
+  const documents = await flowReadApi.listDocuments(demo.workspace.id);
+  const observed = documents.find((item) => item.id === demo.document.id);
+  if (!observed || observed.title !== demo.document.title || observed.status !== demo.document.status) {
+    throw new Error("The second client did not read the updated document.");
+  }
+
+  demo.observed = observed;
+  demo.stage = 3;
+  demo.request = "GET /documents?workspaceId=...";
+  demo.message = "Verified through a second API client. Launch MAUI to see its live document list.";
+  renderFlowDemo();
+}
+
+function renderFlowDemo() {
+  const demo = state.flowDemo;
+  elements.flowBackendUrl.textContent = `Backend: ${window.location.origin}`;
+  elements.flowRuntime.textContent = state.runtimeName;
+  elements.flowWorkspace.textContent = demo.workspace?.name ?? "-";
+  elements.flowElectronTitle.textContent = demo.document?.title ?? "-";
+  elements.flowElectronStatus.textContent = demo.document?.status ?? "-";
+  elements.flowRequest.textContent = demo.request;
+  elements.flowDocumentId.textContent = demo.document?.id ?? "-";
+  elements.flowMauiTitle.textContent = demo.observed?.title ?? "-";
+  elements.flowMauiStatus.textContent = demo.observed?.status ?? "-";
+  elements.flowMauiUpdated.textContent = demo.observed ? formatDate(demo.observed.updatedAt) : "-";
+  elements.flowMessage.textContent = demo.message;
+  elements.prepareFlowStatus.textContent = demo.stage >= 1 ? "Prepared" : "Ready";
+  elements.updateFlowStatus.textContent = demo.stage >= 2 ? "Updated" : "Waiting";
+  elements.readFlowStatus.textContent = demo.stage >= 3 ? "Verified" : "Waiting";
+  elements.prepareFlowDemo.classList.toggle("active", demo.stage >= 1);
+  elements.updateFlowDemo.classList.toggle("active", demo.stage >= 2);
+  elements.readFlowDemo.classList.toggle("active", demo.stage >= 3);
+  elements.runFlowDemo.disabled = demo.busy;
+  elements.prepareFlowDemo.disabled = demo.busy;
+  elements.updateFlowDemo.disabled = demo.busy || demo.stage < 1;
+  elements.readFlowDemo.disabled = demo.busy || demo.stage < 2;
+  elements.viewFlowWorkspace.disabled = demo.busy || !demo.workspace;
 }
 
 function renderWorkspaces() {
