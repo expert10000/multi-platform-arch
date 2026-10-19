@@ -5,7 +5,7 @@ Desktop host for the shared platform contract.
 It uses its own renderer and the shared browser API client. It exposes the same core workflow as the Web Host:
 
 - browse and create workspaces
-- create documents
+- create and edit document titles, statuses, and tags
 - upload local files
 - queue document processing
 - monitor jobs
@@ -13,6 +13,7 @@ It uses its own renderer and the shared browser API client. It exposes the same 
 - open the Admin and Web Host surfaces in the system browser
 
 By default it talks to the local Node backend at `http://localhost:3000`. The desktop UI also includes a backend field and remembers the last connected backend on that machine.
+To see edits in MAUI, connect both desktop hosts to this same backend URL.
 
 Run after installing this host's dependencies:
 

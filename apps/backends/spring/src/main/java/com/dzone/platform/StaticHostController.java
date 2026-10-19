@@ -24,6 +24,76 @@ public class StaticHostController {
     return serve(adminRoot, "index.html");
   }
 
+  @GetMapping({"/node-admin", "/node-admin/"})
+  ResponseEntity<byte[]> nodeAdminIndex() throws IOException {
+    return serve(adminRoot.resolve("node-admin"), "index.html");
+  }
+
+  @GetMapping("/node-admin/{*assetPath}")
+  ResponseEntity<byte[]> nodeAdminAsset(@PathVariable String assetPath) throws IOException {
+    return serve(adminRoot.resolve("node-admin"), cleanAssetPath(assetPath));
+  }
+
+  @GetMapping({"/spring-admin", "/spring-admin/"})
+  ResponseEntity<byte[]> springAdminIndex() throws IOException {
+    return serve(adminRoot.resolve("spring-admin"), "index.html");
+  }
+
+  @GetMapping("/spring-admin/{*assetPath}")
+  ResponseEntity<byte[]> springAdminAsset(@PathVariable String assetPath) throws IOException {
+    return serve(adminRoot.resolve("spring-admin"), cleanAssetPath(assetPath));
+  }
+
+  @GetMapping({"/python-admin", "/python-admin/"})
+  ResponseEntity<byte[]> pythonAdminIndex() throws IOException {
+    return serve(adminRoot.resolve("python-admin"), "index.html");
+  }
+
+  @GetMapping("/python-admin/{*assetPath}")
+  ResponseEntity<byte[]> pythonAdminAsset(@PathVariable String assetPath) throws IOException {
+    return serve(adminRoot.resolve("python-admin"), cleanAssetPath(assetPath));
+  }
+
+  @GetMapping({"/aspnet-admin", "/aspnet-admin/"})
+  ResponseEntity<byte[]> aspNetAdminIndex() throws IOException {
+    return serve(adminRoot.resolve("aspnet-admin"), "index.html");
+  }
+
+  @GetMapping("/aspnet-admin/{*assetPath}")
+  ResponseEntity<byte[]> aspNetAdminAsset(@PathVariable String assetPath) throws IOException {
+    return serve(adminRoot.resolve("aspnet-admin"), cleanAssetPath(assetPath));
+  }
+
+  @GetMapping({"/document-worker-admin", "/document-worker-admin/"})
+  ResponseEntity<byte[]> documentWorkerAdminIndex() throws IOException {
+    return serve(adminRoot.resolve("document-worker-admin"), "index.html");
+  }
+
+  @GetMapping("/document-worker-admin/{*assetPath}")
+  ResponseEntity<byte[]> documentWorkerAdminAsset(@PathVariable String assetPath) throws IOException {
+    return serve(adminRoot.resolve("document-worker-admin"), cleanAssetPath(assetPath));
+  }
+
+  @GetMapping({"/python-worker-admin", "/python-worker-admin/"})
+  ResponseEntity<byte[]> pythonWorkerAdminIndex() throws IOException {
+    return serve(adminRoot.resolve("python-worker-admin"), "index.html");
+  }
+
+  @GetMapping("/python-worker-admin/{*assetPath}")
+  ResponseEntity<byte[]> pythonWorkerAdminAsset(@PathVariable String assetPath) throws IOException {
+    return serve(adminRoot.resolve("python-worker-admin"), cleanAssetPath(assetPath));
+  }
+
+  @GetMapping({"/search-worker-admin", "/search-worker-admin/"})
+  ResponseEntity<byte[]> searchWorkerAdminIndex() throws IOException {
+    return serve(adminRoot.resolve("search-worker-admin"), "index.html");
+  }
+
+  @GetMapping("/search-worker-admin/{*assetPath}")
+  ResponseEntity<byte[]> searchWorkerAdminAsset(@PathVariable String assetPath) throws IOException {
+    return serve(adminRoot.resolve("search-worker-admin"), cleanAssetPath(assetPath));
+  }
+
   @GetMapping("/admin/{*assetPath}")
   ResponseEntity<byte[]> adminAsset(@PathVariable String assetPath) throws IOException {
     return serve(adminRoot, cleanAssetPath(assetPath));
@@ -91,4 +161,3 @@ public class StaticHostController {
     return Path.of(System.getProperty("user.dir")).toAbsolutePath().normalize();
   }
 }
-

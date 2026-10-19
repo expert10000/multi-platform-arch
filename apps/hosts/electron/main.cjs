@@ -1,7 +1,8 @@
 const { app, BrowserWindow, ipcMain, shell } = require("electron");
 const path = require("node:path");
 
-const backendUrl = process.env.DZONE_BACKEND_URL || "http://localhost:3000";
+const configuredBackendUrl = process.env.DZONE_BACKEND_URL;
+const backendUrl = configuredBackendUrl || "http://localhost:3000";
 const browserPaths = new Set(["/admin/", "/web/"]);
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 let mainWindow = null;
@@ -34,7 +35,7 @@ function createWindow() {
   });
 
   mainWindow.loadFile(path.join(__dirname, "renderer", "index.html"), {
-    query: { backendUrl }
+    query: configuredBackendUrl ? { backendUrl: configuredBackendUrl } : {}
   });
 
   mainWindow.on("closed", () => {

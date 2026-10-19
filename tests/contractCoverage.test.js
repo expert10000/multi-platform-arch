@@ -67,6 +67,14 @@ test("backend covers every OpenAPI operation", async () => {
     coveredOperations.add("closeSpringBackend");
     assert.equal(springClose.host, "spring-backend");
 
+    const aspNetCoreLaunch = await api.launchAspNetCoreBackend();
+    coveredOperations.add("launchAspNetCoreBackend");
+    assert.equal(aspNetCoreLaunch.host, "aspnet-core-backend");
+
+    const aspNetCoreClose = await api.closeAspNetCoreBackend();
+    coveredOperations.add("closeAspNetCoreBackend");
+    assert.equal(aspNetCoreClose.host, "aspnet-core-backend");
+
     const mauiSetup = await api.setupMauiHost();
     coveredOperations.add("setupMauiHost");
     assert.equal(mauiSetup.host, "maui");
@@ -82,6 +90,30 @@ test("backend covers every OpenAPI operation", async () => {
     const springSetupStatus = await api.getSpringSetupStatus();
     coveredOperations.add("getSpringSetupStatus");
     assert.equal(springSetupStatus.host, "spring");
+
+    const pythonSetup = await api.setupPythonTooling();
+    coveredOperations.add("setupPythonTooling");
+    assert.equal(pythonSetup.host, "python");
+
+    const pythonSetupStatus = await api.getPythonToolingStatus();
+    coveredOperations.add("getPythonToolingStatus");
+    assert.equal(pythonSetupStatus.host, "python");
+
+    const dotnetSetup = await api.setupDotnetTooling();
+    coveredOperations.add("setupDotnetTooling");
+    assert.equal(dotnetSetup.host, "dotnet");
+
+    const dotnetSetupStatus = await api.getDotnetToolingStatus();
+    coveredOperations.add("getDotnetToolingStatus");
+    assert.equal(dotnetSetupStatus.host, "dotnet");
+
+    const electronDependenciesSetup = await api.setupElectronDependencies();
+    coveredOperations.add("setupElectronDependencies");
+    assert.equal(electronDependenciesSetup.host, "electron-deps");
+
+    const electronDependenciesSetupStatus = await api.getElectronDependenciesStatus();
+    coveredOperations.add("getElectronDependenciesStatus");
+    assert.equal(electronDependenciesSetupStatus.host, "electron-deps");
 
     const initialWorkspaces = await api.listWorkspaces();
     coveredOperations.add("listWorkspaces");
@@ -114,10 +146,19 @@ test("backend covers every OpenAPI operation", async () => {
     assert.equal(fetchedDocument.id, document.id);
 
     const updatedDocument = await api.updateDocument(document.id, {
-      status: "review"
+      title: "Shared Plan",
+      status: "review",
+      tags: ["electron", "shared"]
     });
     coveredOperations.add("updateDocument");
     assert.equal(updatedDocument.status, "review");
+
+    const secondClient = createPlatformApi({ baseUrl });
+    const [visibleDocument] = await secondClient.listDocuments(workspace.id);
+    assert.equal(visibleDocument.id, document.id);
+    assert.equal(visibleDocument.title, "Shared Plan");
+    assert.equal(visibleDocument.status, "review");
+    assert.deepEqual(visibleDocument.tags, ["electron", "shared"]);
 
     const upload = await api.uploadDocumentFile(
       document.id,
@@ -242,6 +283,16 @@ async function startServer(options) {
       status: "stopping",
       backendUrl
     }),
+    launchAspNetCoreBackend: async ({ backendUrl }) => ({
+      host: "aspnet-core-backend",
+      status: "starting",
+      backendUrl
+    }),
+    closeAspNetCoreBackend: async ({ backendUrl }) => ({
+      host: "aspnet-core-backend",
+      status: "stopping",
+      backendUrl
+    }),
     setupMauiHost: async () => ({
       host: "maui",
       status: "starting",
@@ -269,6 +320,48 @@ async function startServer(options) {
       java: "missing",
       maven: "missing",
       spring: "stopped",
+      lastOutput: ""
+    }),
+    setupPythonTooling: async () => ({
+      host: "python",
+      status: "starting",
+      command: "winget install Python.Python.3.11",
+      python: "missing",
+      lastOutput: ""
+    }),
+    getPythonToolingStatus: async () => ({
+      host: "python",
+      status: "idle",
+      command: "winget install Python.Python.3.11",
+      python: "missing",
+      lastOutput: ""
+    }),
+    setupDotnetTooling: async () => ({
+      host: "dotnet",
+      status: "starting",
+      command: "winget install Microsoft.DotNet.SDK.10",
+      dotnet: "missing",
+      lastOutput: ""
+    }),
+    getDotnetToolingStatus: async () => ({
+      host: "dotnet",
+      status: "idle",
+      command: "winget install Microsoft.DotNet.SDK.10",
+      dotnet: "missing",
+      lastOutput: ""
+    }),
+    setupElectronDependencies: async () => ({
+      host: "electron-deps",
+      status: "starting",
+      command: "npm --prefix apps/hosts/electron install",
+      electronDependencies: "missing",
+      lastOutput: ""
+    }),
+    getElectronDependenciesStatus: async () => ({
+      host: "electron-deps",
+      status: "idle",
+      command: "npm --prefix apps/hosts/electron install",
+      electronDependencies: "missing",
       lastOutput: ""
     })
   });

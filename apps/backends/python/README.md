@@ -4,6 +4,15 @@ This backend is a dependency-free Python implementation of the shared OpenAPI co
 
 It keeps metadata in memory and stores uploaded file bytes under `data/python-files/` by default.
 
+The backend also runs a lightweight background worker thread. It processes the shared job types:
+
+- `extract-text`
+- `thumbnail`
+- `summarize`
+- `index-search`
+
+This keeps Python as the preferred place for future OCR, AI, embedding, and search libraries while preserving the same API contract used by every backend.
+
 Run:
 
 ```bash

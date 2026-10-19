@@ -12,11 +12,18 @@ const sharedPublicRoot = fileURLToPath(new URL("../../../hosts/shared/public", i
 const electronHostRoot = fileURLToPath(new URL("../../../hosts/electron/", import.meta.url));
 const dotnetDesktopHostRoot = fileURLToPath(new URL("../../../hosts/dotnet-desktop/", import.meta.url));
 const mauiHostRoot = fileURLToPath(new URL("../../../hosts/maui/DzoneMauiHost/", import.meta.url));
+const aspNetCoreBackendRoot = fileURLToPath(new URL("../../aspnet-core/", import.meta.url));
 const repoRoot = fileURLToPath(new URL("../../../../", import.meta.url));
 const mauiInstallScript = fileURLToPath(new URL("../../../../scripts/install-maui-workload.ps1", import.meta.url));
 const springInstallScript = fileURLToPath(new URL("../../../../scripts/install-spring-tooling.ps1", import.meta.url));
+const pythonInstallScript = fileURLToPath(new URL("../../../../scripts/install-python-tooling.ps1", import.meta.url));
+const dotnetInstallScript = fileURLToPath(new URL("../../../../scripts/install-dotnet-tooling.ps1", import.meta.url));
+const electronDepsInstallScript = fileURLToPath(new URL("../../../../scripts/install-electron-deps.ps1", import.meta.url));
 const defaultMauiSetupLog = fileURLToPath(new URL("../../../../data/runtime/maui-setup.log", import.meta.url));
 const defaultSpringSetupLog = fileURLToPath(new URL("../../../../data/runtime/spring-setup.log", import.meta.url));
+const defaultPythonSetupLog = fileURLToPath(new URL("../../../../data/runtime/python-setup.log", import.meta.url));
+const defaultDotnetSetupLog = fileURLToPath(new URL("../../../../data/runtime/dotnet-setup.log", import.meta.url));
+const defaultElectronDepsSetupLog = fileURLToPath(new URL("../../../../data/runtime/electron-deps-setup.log", import.meta.url));
 const defaultFileStorageRoot = fileURLToPath(new URL("../../../../data/files/", import.meta.url));
 
 export function createServer(
@@ -36,7 +43,15 @@ export function createServer(
     setupMauiHost,
     getMauiSetupStatus,
     setupSpringBackend,
-    getSpringSetupStatus
+    getSpringSetupStatus,
+    launchAspNetCoreBackend,
+    closeAspNetCoreBackend,
+    setupPythonTooling,
+    getPythonToolingStatus,
+    setupDotnetTooling,
+    getDotnetToolingStatus,
+    setupElectronDependencies,
+    getElectronDependenciesStatus
   } = options;
   const electronHostController =
     launchElectronHost || closeElectronHost
@@ -72,6 +87,40 @@ export function createServer(
   const defaultSpringSetupRunner = createSpringSetupRunner();
   const springSetup = setupSpringBackend ?? defaultSpringSetupRunner;
   const springSetupStatus = getSpringSetupStatus ?? defaultSpringSetupRunner.status;
+  const aspNetCoreBackendController =
+    launchAspNetCoreBackend || closeAspNetCoreBackend
+      ? {
+          launchAspNetCoreBackend,
+          closeAspNetCoreBackend: closeAspNetCoreBackend ?? defaultCloseAspNetCoreBackend
+        }
+      : createAspNetCoreBackendController();
+  const defaultPythonSetupRunner = createToolSetupRunner({
+    host: "python",
+    command: "winget install Python.Python.3.11",
+    scriptPath: pythonInstallScript,
+    logPath: defaultPythonSetupLog,
+    checks: { python: () => commandAvailable("python") }
+  });
+  const pythonSetup = setupPythonTooling ?? defaultPythonSetupRunner;
+  const pythonSetupStatus = getPythonToolingStatus ?? defaultPythonSetupRunner.status;
+  const defaultDotnetSetupRunner = createToolSetupRunner({
+    host: "dotnet",
+    command: "winget install Microsoft.DotNet.SDK.10",
+    scriptPath: dotnetInstallScript,
+    logPath: defaultDotnetSetupLog,
+    checks: { dotnet: () => commandAvailable("dotnet") }
+  });
+  const dotnetSetup = setupDotnetTooling ?? defaultDotnetSetupRunner;
+  const dotnetSetupStatus = getDotnetToolingStatus ?? defaultDotnetSetupRunner.status;
+  const defaultElectronDepsSetupRunner = createToolSetupRunner({
+    host: "electron-deps",
+    command: "npm --prefix apps/hosts/electron install",
+    scriptPath: electronDepsInstallScript,
+    logPath: defaultElectronDepsSetupLog,
+    checks: { electronDependencies: electronDependenciesState }
+  });
+  const electronDepsSetup = setupElectronDependencies ?? defaultElectronDepsSetupRunner;
+  const electronDepsSetupStatus = getElectronDependenciesStatus ?? defaultElectronDepsSetupRunner.status;
   const service = platform.services.documents;
 
   return createHttpServer(async (request, response) => {
@@ -127,12 +176,44 @@ export function createServer(
         return sendJson(response, 200, await springSetupStatus());
       }
 
+      if (method === "POST" && path === "/runtime/setup/python") {
+        return sendJson(response, 202, await pythonSetup());
+      }
+
+      if (method === "GET" && path === "/runtime/setup/python") {
+        return sendJson(response, 200, await pythonSetupStatus());
+      }
+
+      if (method === "POST" && path === "/runtime/setup/dotnet") {
+        return sendJson(response, 202, await dotnetSetup());
+      }
+
+      if (method === "GET" && path === "/runtime/setup/dotnet") {
+        return sendJson(response, 200, await dotnetSetupStatus());
+      }
+
+      if (method === "POST" && path === "/runtime/setup/electron-deps") {
+        return sendJson(response, 202, await electronDepsSetup());
+      }
+
+      if (method === "GET" && path === "/runtime/setup/electron-deps") {
+        return sendJson(response, 200, await electronDepsSetupStatus());
+      }
+
       if (method === "POST" && path === "/runtime/backends/spring/open") {
         return sendJson(response, 202, await springBackendController.launchSpringBackend({ backendUrl: "http://localhost:3200" }));
       }
 
       if (method === "POST" && path === "/runtime/backends/spring/close") {
         return sendJson(response, 202, await springBackendController.closeSpringBackend({ backendUrl: "http://localhost:3200" }));
+      }
+
+      if (method === "POST" && path === "/runtime/backends/aspnet-core/open") {
+        return sendJson(response, 202, await aspNetCoreBackendController.launchAspNetCoreBackend({ backendUrl: "http://localhost:3300" }));
+      }
+
+      if (method === "POST" && path === "/runtime/backends/aspnet-core/close") {
+        return sendJson(response, 202, await aspNetCoreBackendController.closeAspNetCoreBackend({ backendUrl: "http://localhost:3300" }));
       }
 
       if (method === "POST" && path === "/runtime/hosts/maui/open") {
@@ -600,6 +681,148 @@ export function createSpringBackendController({
   };
 }
 
+export function createToolSetupRunner({
+  host,
+  command,
+  scriptPath,
+  workingDirectory = repoRoot,
+  logPath,
+  spawnProcess = spawn,
+  isProcessRunning = isChildProcessRunning,
+  now = () => new Date(),
+  checks = {}
+} = {}) {
+  let setupProcess = null;
+  let state = {
+    host,
+    status: "idle",
+    command,
+    logPath,
+    startedAt: null,
+    finishedAt: null,
+    exitCode: null,
+    signal: null,
+    lastOutput: ""
+  };
+
+  async function setupTooling() {
+    if (isProcessRunning(setupProcess)) {
+      return setupStatus("running");
+    }
+    setupProcess = null;
+
+    await mkdir(dirname(logPath), { recursive: true });
+    await appendLog(logPath, `\n[${host}] Setup requested at ${now().toISOString()}\n`);
+    state = {
+      ...state,
+      status: "starting",
+      startedAt: now().toISOString(),
+      finishedAt: null,
+      exitCode: null,
+      signal: null,
+      lastOutput: ""
+    };
+
+    setupProcess = spawnProcess(setupExecutable(), setupArgs(scriptPath), {
+      cwd: workingDirectory,
+      detached: false,
+      shell: false,
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true
+    });
+    await appendLog(logPath, `[${host}] Setup process started${setupProcess.pid ? ` with pid ${setupProcess.pid}` : ""}\n`);
+    captureInstallerOutput(setupProcess.stdout, logPath, (text) => updateLastOutput(text));
+    captureInstallerOutput(setupProcess.stderr, logPath, (text) => updateLastOutput(text));
+    setupProcess.once?.("close", async (exitCode, signal) => {
+      const finishedAt = now().toISOString();
+      const status = exitCode === 0 ? "completed" : "failed";
+      state = {
+        ...state,
+        status,
+        finishedAt,
+        exitCode,
+        signal
+      };
+      await appendLog(logPath, `[${host}] Setup ${status} at ${finishedAt} (exit ${exitCode ?? "none"}${signal ? `, signal ${signal}` : ""})\n`);
+      setupProcess = null;
+    });
+
+    return setupStatus("starting");
+  }
+
+  async function setupStatus(statusOverride) {
+    const running = isProcessRunning(setupProcess);
+    const checkEntries = await Promise.all(
+      Object.entries(checks).map(async ([key, check]) => [key, await check()])
+    );
+    const checkState = Object.fromEntries(checkEntries);
+    const lastOutput = await readLogTail(logPath);
+    const ready = checkEntries.length > 0 && checkEntries.every(([, value]) => value === "installed");
+    const status = statusOverride ?? (running ? "running" : ready ? "completed" : state.status);
+    state = {
+      ...state,
+      ...checkState,
+      lastOutput
+    };
+    return {
+      ...state,
+      status
+    };
+  }
+
+  function updateLastOutput(text) {
+    state = {
+      ...state,
+      lastOutput: trimLog(`${state.lastOutput}${text}`)
+    };
+  }
+
+  setupTooling.status = setupStatus;
+  return setupTooling;
+}
+
+export function createAspNetCoreBackendController({
+  workingDirectory = aspNetCoreBackendRoot,
+  spawnProcess = spawn,
+  isProcessRunning = isChildProcessRunning,
+  stopProcess = stopChildProcess,
+  checkAspNetCoreRuntime = aspNetCoreRuntimeState
+} = {}) {
+  let backendProcess = null;
+
+  return {
+    async launchAspNetCoreBackend({ backendUrl }) {
+      if (isProcessRunning(backendProcess)) {
+        return { host: "aspnet-core-backend", status: "running", backendUrl };
+      }
+      if (await checkAspNetCoreRuntime() === "running") {
+        return { host: "aspnet-core-backend", status: "running", backendUrl };
+      }
+      backendProcess = null;
+
+      backendProcess = spawnAspNetCoreBackend(workingDirectory, spawnProcess);
+      backendProcess.once?.("exit", () => {
+        backendProcess = null;
+      });
+      backendProcess.unref();
+
+      return { host: "aspnet-core-backend", status: "starting", backendUrl };
+    },
+
+    async closeAspNetCoreBackend({ backendUrl }) {
+      if (!isProcessRunning(backendProcess)) {
+        backendProcess = null;
+        return { host: "aspnet-core-backend", status: "stopped", backendUrl };
+      }
+
+      const processToStop = backendProcess;
+      backendProcess = null;
+      stopProcess(processToStop, spawnProcess);
+      return { host: "aspnet-core-backend", status: "stopping", backendUrl };
+    }
+  };
+}
+
 function electronLaunchCommand(hostRoot, fileExists) {
   const executablePath =
     process.platform === "win32"
@@ -678,6 +901,14 @@ function springSetupArgs(scriptPath) {
   return ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptPath];
 }
 
+function setupExecutable() {
+  return process.platform === "win32" ? "powershell.exe" : "pwsh";
+}
+
+function setupArgs(scriptPath) {
+  return ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptPath];
+}
+
 function spawnSpringBackend(workingDirectory, spawnProcess) {
   const command = springBackendCommand();
   return spawnProcess(command.file, command.args, {
@@ -702,6 +933,17 @@ function springBackendCommand() {
         args: ["-f", "apps/backends/spring/pom.xml", "spring-boot:run"],
         windowsHide: false
       };
+}
+
+function spawnAspNetCoreBackend(workingDirectory, spawnProcess) {
+  return spawnProcess("dotnet", ["run", "--project", "DzoneAspNetCoreBackend.csproj", "--urls", "http://127.0.0.1:3300"], {
+    cwd: workingDirectory,
+    detached: true,
+    env: { ...process.env, ASPNETCORE_URLS: "http://127.0.0.1:3300" },
+    shell: false,
+    stdio: "ignore",
+    windowsHide: true
+  });
 }
 
 function commandAvailable(commandName, spawnProcess = spawn) {
@@ -735,6 +977,25 @@ async function springRuntimeState() {
   } catch {
     return "stopped";
   }
+}
+
+async function aspNetCoreRuntimeState() {
+  try {
+    const response = await fetch("http://127.0.0.1:3300/health", { signal: AbortSignal.timeout(1200) });
+    if (!response.ok) {
+      return "stopped";
+    }
+    const health = await response.json();
+    return health.runtime === "aspnet-core" ? "running" : "unknown";
+  } catch {
+    return "stopped";
+  }
+}
+
+async function electronDependenciesState() {
+  return existsSync(join(electronHostRoot, "node_modules", "electron"))
+    ? "installed"
+    : "missing";
 }
 
 function captureInstallerOutput(stream, logPath, onOutput) {
@@ -808,8 +1069,12 @@ async function defaultCloseSpringBackend({ backendUrl }) {
   return { host: "spring-backend", status: "stopped", backendUrl };
 }
 
+async function defaultCloseAspNetCoreBackend({ backendUrl }) {
+  return { host: "aspnet-core-backend", status: "stopped", backendUrl };
+}
+
 function isStaticRequest(path) {
-  return path === "/" || path === "/admin" || path === "/web" || path.startsWith("/admin/") || path.startsWith("/web/") || path.startsWith("/shared/");
+  return path === "/" || path === "/admin" || path === "/web" || path === "/node-admin" || path === "/spring-admin" || path === "/python-admin" || path === "/aspnet-admin" || path === "/document-worker-admin" || path === "/python-worker-admin" || path === "/search-worker-admin" || path.startsWith("/admin/") || path.startsWith("/web/") || path.startsWith("/shared/") || path.startsWith("/node-admin/") || path.startsWith("/spring-admin/") || path.startsWith("/python-admin/") || path.startsWith("/aspnet-admin/") || path.startsWith("/document-worker-admin/") || path.startsWith("/python-worker-admin/") || path.startsWith("/search-worker-admin/");
 }
 
 async function tryServeStatic(path, response) {
@@ -849,11 +1114,53 @@ function staticTargetFor(path) {
   if (path === "/web" || path === "/web/") {
     return { root: webPublicRoot, relativePath: "index.html" };
   }
+  if (path === "/node-admin" || path === "/node-admin/") {
+    return { root: join(adminPublicRoot, "node-admin"), relativePath: "index.html" };
+  }
+  if (path === "/spring-admin" || path === "/spring-admin/") {
+    return { root: join(adminPublicRoot, "spring-admin"), relativePath: "index.html" };
+  }
+  if (path === "/python-admin" || path === "/python-admin/") {
+    return { root: join(adminPublicRoot, "python-admin"), relativePath: "index.html" };
+  }
+  if (path === "/aspnet-admin" || path === "/aspnet-admin/") {
+    return { root: join(adminPublicRoot, "aspnet-admin"), relativePath: "index.html" };
+  }
+  if (path === "/document-worker-admin" || path === "/document-worker-admin/") {
+    return { root: join(adminPublicRoot, "document-worker-admin"), relativePath: "index.html" };
+  }
+  if (path === "/python-worker-admin" || path === "/python-worker-admin/") {
+    return { root: join(adminPublicRoot, "python-worker-admin"), relativePath: "index.html" };
+  }
+  if (path === "/search-worker-admin" || path === "/search-worker-admin/") {
+    return { root: join(adminPublicRoot, "search-worker-admin"), relativePath: "index.html" };
+  }
   if (path.startsWith("/admin/")) {
     return { root: adminPublicRoot, relativePath: path.slice("/admin/".length) };
   }
   if (path.startsWith("/web/")) {
     return { root: webPublicRoot, relativePath: path.slice("/web/".length) };
+  }
+  if (path.startsWith("/node-admin/")) {
+    return { root: join(adminPublicRoot, "node-admin"), relativePath: path.slice("/node-admin/".length) };
+  }
+  if (path.startsWith("/spring-admin/")) {
+    return { root: join(adminPublicRoot, "spring-admin"), relativePath: path.slice("/spring-admin/".length) };
+  }
+  if (path.startsWith("/python-admin/")) {
+    return { root: join(adminPublicRoot, "python-admin"), relativePath: path.slice("/python-admin/".length) };
+  }
+  if (path.startsWith("/aspnet-admin/")) {
+    return { root: join(adminPublicRoot, "aspnet-admin"), relativePath: path.slice("/aspnet-admin/".length) };
+  }
+  if (path.startsWith("/document-worker-admin/")) {
+    return { root: join(adminPublicRoot, "document-worker-admin"), relativePath: path.slice("/document-worker-admin/".length) };
+  }
+  if (path.startsWith("/python-worker-admin/")) {
+    return { root: join(adminPublicRoot, "python-worker-admin"), relativePath: path.slice("/python-worker-admin/".length) };
+  }
+  if (path.startsWith("/search-worker-admin/")) {
+    return { root: join(adminPublicRoot, "search-worker-admin"), relativePath: path.slice("/search-worker-admin/".length) };
   }
   if (path.startsWith("/shared/")) {
     return { root: sharedPublicRoot, relativePath: path.slice("/shared/".length) };

@@ -42,6 +42,7 @@ docs/
 ## Run
 
 ```bash
+npm run check:local
 npm test
 npm start
 ```
@@ -56,6 +57,66 @@ The browser hosts call the backend through `apps/hosts/shared/public/apiClient.j
 operation names match `contracts/openapi.yaml`.
 Processing jobs are picked up by the local worker and move from `queued` to
 `running` to `completed`.
+
+## Fresh Clone Setup
+
+On Windows, check the local machine:
+
+```powershell
+npm run check:local
+```
+
+If prerequisites are missing, bootstrap the local developer machine:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-local.ps1
+```
+
+That script installs or repairs:
+
+- Node.js LTS through `winget`
+- Python 3.11 through `winget`
+- .NET SDK 10 through `winget`
+- Java 17 through `winget`
+- Maven through `winget`, with an official Apache Maven archive fallback
+- Electron host dependencies through `npm --prefix apps/hosts/electron install`
+
+The optional MAUI workload is intentionally not installed by default because it is large.
+Install it only when needed:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-local.ps1 -IncludeMaui
+```
+
+Important bootstrap boundary: Node.js must exist before the dashboard can start.
+After Node is installed, the Central Admin console can launch local runtimes.
+Its Local Setup tab can install or repair Python, .NET SDK, Electron host
+dependencies, Spring Java/Maven tooling, and the optional MAUI workload from the
+web UI.
+
+### Fresh Computer Smoke Test
+
+Expected first run on another Windows computer:
+
+```powershell
+git clone https://github.com/expert10000/multi-platform-arch.git
+cd multi-platform-arch
+npm install
+npm run start:backend:node
+```
+
+Then open `http://localhost:3000/` and use the Central Admin **Local Setup** tab.
+From there, install or repair Python, .NET SDK, Electron dependencies,
+Spring Java/Maven tooling, and MAUI as needed.
+
+Requirements and caveats:
+
+- Node.js must be installed before this dashboard can run.
+- Internet access is required for `winget`, Maven fallback downloads, and npm installs.
+- `winget` should be available for automatic Windows tool installs.
+- PowerShell script execution must be allowed for the setup scripts.
+- Some installers may ask for administrator or UAC approval.
+- If an installer changes `PATH`, restart the terminal before retrying a runtime.
 
 ## Backends
 
@@ -79,6 +140,14 @@ npm run start:backend:spring
 
 The Spring Boot backend listens on `http://localhost:3200` by default.
 
+Run the ASP.NET Core backend after installing the .NET SDK:
+
+```bash
+npm run start:backend:aspnet
+```
+
+The ASP.NET Core backend listens on `http://localhost:3300` by default.
+
 All backends expose the same OpenAPI route surface. The Python backend keeps
 metadata in memory and stores uploaded bytes under `data/python-files/`. The
 Spring Boot backend keeps metadata in memory, stores uploaded bytes under
@@ -95,6 +164,30 @@ deployments where JVM operations, enterprise integrations, and Java ecosystem
 tooling are preferred. Desktop hosts should not be hardwired to one backend:
 keep `DZONE_BACKEND_URL` as the switch so a desktop can use Node locally or
 Spring Boot when connected to a shared service.
+
+For cross-host document updates, point Electron and MAUI at the same backend
+URL. Electron can edit document metadata; MAUI refreshes its document list
+while open. The backends currently have separate data stores, so choosing
+different backend URLs does not synchronize their documents. Node persists
+locally in SQLite; Spring Boot and ASP.NET Core currently keep metadata in
+memory.
+
+The Central Admin **Document Flow** tab runs a sample create, update, stored
+resource check, and second-client read against the backend serving the dashboard.
+**Run Demo** opens a five-stage walkthrough; **Run Again** replays it. The
+individual step buttons expose each request, and the launch buttons open
+Electron and MAUI on that same backend when their local tooling is installed.
+The walkthrough uses dashboard API clients, not automated clicks inside the
+desktop apps. Re-running it reuses the `Cross-Host Demo` workspace and tagged
+sample document.
+
+![Central Admin document flow walkthrough](docs/images/document-flow-walkthrough.png)
+
+The diagram below shows the intended Electron-to-MAUI flow through the shared
+contract. Today, both hosts must point at the **same backend URL** to see the
+same document; the different backend implementations do not share a database.
+
+![Cross-host document synchronization diagram](docs/images/cross-host-document-synchronization.png)
 
 ## Hosts
 

@@ -9,8 +9,10 @@ import {
   createDotnetDesktopHostController,
   createMauiHostController,
   createMauiSetupRunner,
+  createAspNetCoreBackendController,
   createSpringBackendController,
   createSpringSetupRunner,
+  createToolSetupRunner,
   createServer
 } from "../apps/backends/node/src/server.js";
 import { createPlatformApi } from "../apps/hosts/shared/public/apiClient.js";
@@ -207,6 +209,42 @@ test("runs optional MAUI setup through the backend", async () => {
   }
 });
 
+test("serves dedicated runtime admin hosts", async () => {
+  const { server, baseUrl } = await startServer();
+  try {
+    const nodeAdmin = await fetch(`${baseUrl}/node-admin/`);
+    const springAdmin = await fetch(`${baseUrl}/spring-admin/`);
+    const pythonAdmin = await fetch(`${baseUrl}/python-admin/`);
+    const aspNetAdmin = await fetch(`${baseUrl}/aspnet-admin/`);
+    const documentWorkerAdmin = await fetch(`${baseUrl}/document-worker-admin/`);
+    const pythonWorkerAdmin = await fetch(`${baseUrl}/python-worker-admin/`);
+    const searchWorkerAdmin = await fetch(`${baseUrl}/search-worker-admin/`);
+    const runtimeScript = await fetch(`${baseUrl}/admin/runtime-admin.js`);
+    const workerScript = await fetch(`${baseUrl}/admin/worker-admin.js`);
+
+    assert.equal(nodeAdmin.status, 200);
+    assert.match(await nodeAdmin.text(), /Node Admin/);
+    assert.equal(springAdmin.status, 200);
+    assert.match(await springAdmin.text(), /Spring Admin/);
+    assert.equal(pythonAdmin.status, 200);
+    assert.match(await pythonAdmin.text(), /Python Admin/);
+    assert.equal(aspNetAdmin.status, 200);
+    assert.match(await aspNetAdmin.text(), /ASP.NET Admin/);
+    assert.equal(documentWorkerAdmin.status, 200);
+    assert.match(await documentWorkerAdmin.text(), /Document Worker Admin/);
+    assert.equal(pythonWorkerAdmin.status, 200);
+    assert.match(await pythonWorkerAdmin.text(), /Python Worker Admin/);
+    assert.equal(searchWorkerAdmin.status, 200);
+    assert.match(await searchWorkerAdmin.text(), /Search Worker Admin/);
+    assert.equal(runtimeScript.status, 200);
+    assert.match(await runtimeScript.text(), /runtimeCatalog/);
+    assert.equal(workerScript.status, 200);
+    assert.match(await workerScript.text(), /workerCatalog/);
+  } finally {
+    server.close();
+  }
+});
+
 test("reports and runs Spring backend setup through the backend", async () => {
   const setups = [];
   const { server, baseUrl } = await startServer({
@@ -243,6 +281,83 @@ test("reports and runs Spring backend setup through the backend", async () => {
     assert.equal(status.maven, "missing");
     assert.equal(status.spring, "stopped");
     assert.equal(setups.length, 1);
+  } finally {
+    server.close();
+  }
+});
+
+test("reports and runs local tooling setup through the backend", async () => {
+  const setups = [];
+  const { server, baseUrl } = await startServer({
+    setupPythonTooling: async () => {
+      setups.push("python");
+      return {
+        host: "python",
+        status: "starting",
+        command: "winget install Python.Python.3.11",
+        python: "missing",
+        lastOutput: ""
+      };
+    },
+    getPythonToolingStatus: async () => ({
+      host: "python",
+      status: "idle",
+      command: "winget install Python.Python.3.11",
+      python: "missing",
+      lastOutput: ""
+    }),
+    setupDotnetTooling: async () => {
+      setups.push("dotnet");
+      return {
+        host: "dotnet",
+        status: "starting",
+        command: "winget install Microsoft.DotNet.SDK.10",
+        dotnet: "missing",
+        lastOutput: ""
+      };
+    },
+    getDotnetToolingStatus: async () => ({
+      host: "dotnet",
+      status: "idle",
+      command: "winget install Microsoft.DotNet.SDK.10",
+      dotnet: "missing",
+      lastOutput: ""
+    }),
+    setupElectronDependencies: async () => {
+      setups.push("electron-deps");
+      return {
+        host: "electron-deps",
+        status: "starting",
+        command: "npm --prefix apps/hosts/electron install",
+        electronDependencies: "missing",
+        lastOutput: ""
+      };
+    },
+    getElectronDependenciesStatus: async () => ({
+      host: "electron-deps",
+      status: "idle",
+      command: "npm --prefix apps/hosts/electron install",
+      electronDependencies: "missing",
+      lastOutput: ""
+    })
+  });
+  const api = createPlatformApi({ baseUrl });
+
+  try {
+    const python = await api.setupPythonTooling();
+    const pythonStatus = await api.getPythonToolingStatus();
+    const dotnet = await api.setupDotnetTooling();
+    const dotnetStatus = await api.getDotnetToolingStatus();
+    const electronDependencies = await api.setupElectronDependencies();
+    const electronDependenciesStatus = await api.getElectronDependenciesStatus();
+
+    assert.equal(python.host, "python");
+    assert.equal(pythonStatus.python, "missing");
+    assert.equal(dotnet.host, "dotnet");
+    assert.equal(dotnetStatus.dotnet, "missing");
+    assert.equal(electronDependencies.host, "electron-deps");
+    assert.equal(electronDependenciesStatus.electronDependencies, "missing");
+    assert.deepEqual(setups, ["python", "dotnet", "electron-deps"]);
   } finally {
     server.close();
   }
@@ -537,6 +652,38 @@ test("MAUI setup runner starts the installer once in the background", async () =
   }
 });
 
+test("launches the ASP.NET Core backend through a local runtime command", async () => {
+  const launches = [];
+  const closes = [];
+  const { server, baseUrl } = await startServer({
+    launchAspNetCoreBackend: async (input) => {
+      launches.push(input);
+      return { host: "aspnet-core-backend", status: "starting", backendUrl: input.backendUrl };
+    },
+    closeAspNetCoreBackend: async (input) => {
+      closes.push(input);
+      return { host: "aspnet-core-backend", status: "stopping", backendUrl: input.backendUrl };
+    }
+  });
+  const api = createPlatformApi({ baseUrl });
+
+  try {
+    const result = await api.launchAspNetCoreBackend();
+    const close = await api.closeAspNetCoreBackend();
+
+    assert.equal(result.host, "aspnet-core-backend");
+    assert.equal(result.status, "starting");
+    assert.equal(result.backendUrl, "http://localhost:3300");
+    assert.equal(close.host, "aspnet-core-backend");
+    assert.equal(close.status, "stopping");
+    assert.equal(close.backendUrl, "http://localhost:3300");
+    assert.deepEqual(launches, [{ backendUrl: "http://localhost:3300" }]);
+    assert.deepEqual(closes, [{ backendUrl: "http://localhost:3300" }]);
+  } finally {
+    server.close();
+  }
+});
+
 test("Spring setup runner reports tool state and starts installer once", async () => {
   const setupRoot = await mkdtemp(join(tmpdir(), "dzone-spring-setup-"));
   const launches = [];
@@ -575,6 +722,55 @@ test("Spring setup runner reports tool state and starts installer once", async (
     assert.deepEqual(launches[0].args.slice(0, 3), ["-NoProfile", "-ExecutionPolicy", "Bypass"]);
     assert.equal(launches[0].args[3], "-File");
     assert.match(launches[0].args[4], /install-spring-tooling\.ps1$/);
+    assert.equal(launches[0].options.detached, false);
+    assert.equal(launches[0].options.shell, false);
+    assert.deepEqual(launches[0].options.stdio, ["ignore", "pipe", "pipe"]);
+    assert.equal(launches[0].options.windowsHide, true);
+  } finally {
+    await rm(setupRoot, { recursive: true, force: true });
+  }
+});
+
+test("generic tool setup runner reports tool state and starts installer once", async () => {
+  const setupRoot = await mkdtemp(join(tmpdir(), "dzone-tool-setup-"));
+  const launches = [];
+  const runner = createToolSetupRunner({
+    host: "python",
+    command: "winget install Python.Python.3.11",
+    scriptPath: join(setupRoot, "install-python-tooling.ps1"),
+    workingDirectory: setupRoot,
+    logPath: join(setupRoot, "python-setup.log"),
+    spawnProcess: (file, args, options) => {
+      launches.push({ file, args, options });
+      return {
+        exitCode: null,
+        signalCode: null,
+        pid: 6543,
+        once() {
+          return undefined;
+        }
+      };
+    },
+    isProcessRunning: (childProcess) => Boolean(childProcess),
+    checks: {
+      python: async () => "installed"
+    }
+  });
+
+  try {
+    const firstSetup = await runner();
+    const secondSetup = await runner();
+    const status = await runner.status();
+
+    assert.equal(firstSetup.status, "starting");
+    assert.equal(secondSetup.status, "running");
+    assert.equal(status.status, "running");
+    assert.equal(status.python, "installed");
+    assert.equal(launches.length, 1);
+    assert.match(launches[0].file, process.platform === "win32" ? /powershell\.exe$/ : /pwsh$/);
+    assert.deepEqual(launches[0].args.slice(0, 3), ["-NoProfile", "-ExecutionPolicy", "Bypass"]);
+    assert.equal(launches[0].args[3], "-File");
+    assert.match(launches[0].args[4], /install-python-tooling\.ps1$/);
     assert.equal(launches[0].options.detached, false);
     assert.equal(launches[0].options.shell, false);
     assert.deepEqual(launches[0].options.stdio, ["ignore", "pipe", "pipe"]);
@@ -623,6 +819,49 @@ test("Spring backend controller starts and stops Maven runtime", async () => {
   assert.equal(launches[0].options.env.SERVER_PORT, "3200");
   assert.equal(launches[0].options.windowsHide, process.platform === "win32");
   assert.deepEqual(stops, [321]);
+});
+
+test("ASP.NET Core backend controller starts and stops dotnet runtime", async () => {
+  const launches = [];
+  const stops = [];
+  const controller = createAspNetCoreBackendController({
+    workingDirectory: process.platform === "win32" ? "C:\\repo\\apps\\backends\\aspnet-core" : "/tmp/repo/apps/backends/aspnet-core",
+    spawnProcess: (file, args, options) => {
+      launches.push({ file, args, options });
+      return {
+        exitCode: null,
+        signalCode: null,
+        pid: 331,
+        once() {
+          return undefined;
+        },
+        unref() {
+          return undefined;
+        }
+      };
+    },
+    isProcessRunning: (childProcess) => Boolean(childProcess),
+    stopProcess: (childProcess) => {
+      stops.push(childProcess.pid);
+    },
+    checkAspNetCoreRuntime: async () => "stopped"
+  });
+
+  const launch = await controller.launchAspNetCoreBackend({ backendUrl: "http://localhost:3300" });
+  const secondLaunch = await controller.launchAspNetCoreBackend({ backendUrl: "http://localhost:3300" });
+  const close = await controller.closeAspNetCoreBackend({ backendUrl: "http://localhost:3300" });
+  const secondClose = await controller.closeAspNetCoreBackend({ backendUrl: "http://localhost:3300" });
+
+  assert.equal(launch.status, "starting");
+  assert.equal(secondLaunch.status, "running");
+  assert.equal(close.status, "stopping");
+  assert.equal(secondClose.status, "stopped");
+  assert.equal(launches.length, 1);
+  assert.equal(launches[0].file, "dotnet");
+  assert.deepEqual(launches[0].args, ["run", "--project", "DzoneAspNetCoreBackend.csproj", "--urls", "http://127.0.0.1:3300"]);
+  assert.equal(launches[0].options.env.ASPNETCORE_URLS, "http://127.0.0.1:3300");
+  assert.equal(launches[0].options.windowsHide, true);
+  assert.deepEqual(stops, [331]);
 });
 
 async function startServer(options) {

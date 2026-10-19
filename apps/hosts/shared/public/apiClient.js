@@ -23,7 +23,15 @@ export const apiOperations = Object.freeze({
   setupMauiHost: "POST /runtime/hosts/maui/setup",
   getMauiSetupStatus: "GET /runtime/hosts/maui/setup",
   setupSpringBackend: "POST /runtime/backends/spring/setup",
-  getSpringSetupStatus: "GET /runtime/backends/spring/setup"
+  getSpringSetupStatus: "GET /runtime/backends/spring/setup",
+  launchAspNetCoreBackend: "POST /runtime/backends/aspnet-core/open",
+  closeAspNetCoreBackend: "POST /runtime/backends/aspnet-core/close",
+  setupPythonTooling: "POST /runtime/setup/python",
+  getPythonToolingStatus: "GET /runtime/setup/python",
+  setupDotnetTooling: "POST /runtime/setup/dotnet",
+  getDotnetToolingStatus: "GET /runtime/setup/dotnet",
+  setupElectronDependencies: "POST /runtime/setup/electron-deps",
+  getElectronDependenciesStatus: "GET /runtime/setup/electron-deps"
 });
 
 export const platformApi = createPlatformApi();
@@ -163,6 +171,48 @@ export function createPlatformApi({ baseUrl = "" } = {}) {
 
     getSpringSetupStatus() {
       return request(baseUrl, "/runtime/backends/spring/setup");
+    },
+
+    launchAspNetCoreBackend() {
+      return request(baseUrl, "/runtime/backends/aspnet-core/open", {
+        method: "POST"
+      });
+    },
+
+    closeAspNetCoreBackend() {
+      return request(baseUrl, "/runtime/backends/aspnet-core/close", {
+        method: "POST"
+      });
+    },
+
+    setupPythonTooling() {
+      return request(baseUrl, "/runtime/setup/python", {
+        method: "POST"
+      });
+    },
+
+    getPythonToolingStatus() {
+      return request(baseUrl, "/runtime/setup/python");
+    },
+
+    setupDotnetTooling() {
+      return request(baseUrl, "/runtime/setup/dotnet", {
+        method: "POST"
+      });
+    },
+
+    getDotnetToolingStatus() {
+      return request(baseUrl, "/runtime/setup/dotnet");
+    },
+
+    setupElectronDependencies() {
+      return request(baseUrl, "/runtime/setup/electron-deps", {
+        method: "POST"
+      });
+    },
+
+    getElectronDependenciesStatus() {
+      return request(baseUrl, "/runtime/setup/electron-deps");
     }
   };
 }

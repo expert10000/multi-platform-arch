@@ -1,4 +1,4 @@
-import { platformApi } from "/shared/apiClient.js";
+import { createPlatformApi, platformApi } from "/shared/apiClient.js";
 
 const state = {
   workspaces: [],
@@ -6,8 +6,29 @@ const state = {
   jobs: [],
   mauiSetup: null,
   springSetup: null,
+  localSetup: {
+    python: null,
+    dotnet: null,
+    electronDependencies: null
+  },
+  nodeHealth: null,
+  aspNetCoreHealth: null,
+  pythonHealth: null,
   runtimeName: "unknown",
+  flowDemo: {
+    workspace: null,
+    document: null,
+    observed: null,
+    stored: null,
+    stage: 0,
+    phase: 0,
+    walkthroughError: false,
+    busy: false,
+    request: "-",
+    message: "Ready to prepare a document."
+  },
   activeWorkspaceId: null,
+  activeCentralSection: "runtime",
   activeArchitectureSection: "models",
   activeImplementationSection: "hosts"
 };
@@ -45,6 +66,11 @@ const architectureSections = {
   }
 };
 
+const nodeApi = createPlatformApi({ baseUrl: "http://localhost:3000" });
+const aspNetCoreApi = createPlatformApi({ baseUrl: "http://localhost:3300" });
+const pythonApi = createPlatformApi({ baseUrl: "http://localhost:3100" });
+const flowReadApi = createPlatformApi({ baseUrl: window.location.origin });
+
 const elements = {
   runtimeStatus: document.querySelector("#runtimeStatus"),
   workspaceForm: document.querySelector("#workspaceForm"),
@@ -68,6 +94,42 @@ const elements = {
   architectureDetail: document.querySelector("#architectureDetail"),
   implementationTabs: document.querySelector("#implementationTabs"),
   implementationDetail: document.querySelector("#implementationDetail"),
+  localSetupDetail: document.querySelector("#localSetupDetail"),
+  flowBackendUrl: document.querySelector("#flowBackendUrl"),
+  flowWalkthrough: document.querySelector("#flowWalkthrough"),
+  flowTrack: document.querySelector("#flowTrack"),
+  flowWalkthroughBackend: document.querySelector("#flowWalkthroughBackend"),
+  flowWalkthroughTitleValue: document.querySelector("#flowWalkthroughTitleValue"),
+  flowWalkthroughStatusValue: document.querySelector("#flowWalkthroughStatusValue"),
+  flowWalkthroughRequest: document.querySelector("#flowWalkthroughRequest"),
+  flowWalkthroughResource: document.querySelector("#flowWalkthroughResource"),
+  flowWalkthroughReadTitle: document.querySelector("#flowWalkthroughReadTitle"),
+  flowWalkthroughReadStatus: document.querySelector("#flowWalkthroughReadStatus"),
+  flowWalkthroughMessage: document.querySelector("#flowWalkthroughMessage"),
+  replayFlowWalkthrough: document.querySelector("#replayFlowWalkthrough"),
+  closeFlowWalkthrough: document.querySelector("#closeFlowWalkthrough"),
+  runFlowDemo: document.querySelector("#runFlowDemo"),
+  prepareFlowDemo: document.querySelector("#prepareFlowDemo"),
+  updateFlowDemo: document.querySelector("#updateFlowDemo"),
+  readFlowDemo: document.querySelector("#readFlowDemo"),
+  prepareFlowStatus: document.querySelector("#prepareFlowStatus"),
+  updateFlowStatus: document.querySelector("#updateFlowStatus"),
+  readFlowStatus: document.querySelector("#readFlowStatus"),
+  openFlowElectron: document.querySelector("#openFlowElectron"),
+  openFlowMaui: document.querySelector("#openFlowMaui"),
+  flowWorkspace: document.querySelector("#flowWorkspace"),
+  flowElectronTitle: document.querySelector("#flowElectronTitle"),
+  flowElectronStatus: document.querySelector("#flowElectronStatus"),
+  flowRuntime: document.querySelector("#flowRuntime"),
+  flowRequest: document.querySelector("#flowRequest"),
+  flowDocumentId: document.querySelector("#flowDocumentId"),
+  flowMauiTitle: document.querySelector("#flowMauiTitle"),
+  flowMauiStatus: document.querySelector("#flowMauiStatus"),
+  flowMauiUpdated: document.querySelector("#flowMauiUpdated"),
+  flowMessage: document.querySelector("#flowMessage"),
+  viewFlowWorkspace: document.querySelector("#viewFlowWorkspace"),
+  centralTabs: document.querySelector("#centralTabs"),
+  centralViews: document.querySelectorAll("[data-central-view]"),
   toast: document.querySelector("#toast")
 };
 
@@ -87,6 +149,40 @@ elements.refreshButton.addEventListener("click", async () => {
     render();
     showToast("Workspace refreshed.");
   });
+});
+
+elements.runFlowDemo.addEventListener("click", () => {
+  elements.flowWalkthrough.showModal();
+  runFlowAction(runFlowWalkthrough);
+});
+elements.replayFlowWalkthrough.addEventListener("click", () => runFlowAction(runFlowWalkthrough));
+elements.closeFlowWalkthrough.addEventListener("click", () => elements.flowWalkthrough.close());
+
+elements.prepareFlowDemo.addEventListener("click", () => runFlowAction(prepareFlowDemo));
+elements.updateFlowDemo.addEventListener("click", () => runFlowAction(updateFlowDemo));
+elements.readFlowDemo.addEventListener("click", () => runFlowAction(readFlowDemo));
+elements.openFlowElectron.addEventListener("click", () => runAction(async () => {
+  await platformApi.launchElectronHost();
+  showToast("Electron launched on this backend.");
+}));
+elements.openFlowMaui.addEventListener("click", () => runAction(async () => {
+  await platformApi.launchMauiHost();
+  showToast("MAUI launched on this backend.");
+}));
+elements.viewFlowWorkspace.addEventListener("click", () => runAction(async () => {
+  state.activeWorkspaceId = state.flowDemo.workspace.id;
+  state.activeCentralSection = "workspaces";
+  await loadWorkspaces();
+  render();
+}));
+
+elements.centralTabs.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-central-section]");
+  if (!button) {
+    return;
+  }
+  state.activeCentralSection = button.dataset.centralSection;
+  renderCentralView();
 });
 
 elements.platformTabs.addEventListener("click", (event) => {
@@ -116,6 +212,10 @@ window.setInterval(() => {
     if (isSpringSetupActive()) {
       await loadSpringSetupStatus();
     }
+    if (isLocalSetupActive() || state.activeCentralSection === "setup") {
+      await loadLocalSetupStatus();
+    }
+    await loadRuntimeHealth();
     if (state.activeWorkspaceId) {
       await refreshActiveWorkspace();
     }
@@ -125,8 +225,10 @@ window.setInterval(() => {
 
 async function initialize() {
   await loadHealth();
+  await loadRuntimeHealth();
   await loadMauiSetupStatus();
   await loadSpringSetupStatus();
+  await loadLocalSetupStatus();
   await loadWorkspaces();
   setDocumentFormEnabled(false);
   render();
@@ -157,6 +259,30 @@ async function loadMauiSetupStatus() {
 
 async function loadSpringSetupStatus() {
   state.springSetup = await platformApi.getSpringSetupStatus().catch(() => null);
+}
+
+async function loadLocalSetupStatus() {
+  const [python, dotnet, electronDependencies] = await Promise.all([
+    platformApi.getPythonToolingStatus().catch(() => null),
+    platformApi.getDotnetToolingStatus().catch(() => null),
+    platformApi.getElectronDependenciesStatus().catch(() => null)
+  ]);
+  state.localSetup = {
+    python,
+    dotnet,
+    electronDependencies
+  };
+}
+
+async function loadRuntimeHealth() {
+  const [nodeHealth, aspNetCoreHealth, pythonHealth] = await Promise.all([
+    nodeApi.getHealth().catch(() => null),
+    aspNetCoreApi.getHealth().catch(() => null),
+    pythonApi.getHealth().catch(() => null)
+  ]);
+  state.nodeHealth = nodeHealth;
+  state.aspNetCoreHealth = aspNetCoreHealth;
+  state.pythonHealth = pythonHealth;
 }
 
 async function refreshActiveWorkspace() {
@@ -238,8 +364,208 @@ function render() {
   renderWorkspaces();
   renderDocuments();
   renderJobs();
+  renderCentralView();
   renderArchitecture();
   renderImplementations();
+  renderLocalSetup();
+  renderFlowDemo();
+}
+
+function renderCentralView() {
+  for (const button of elements.centralTabs.querySelectorAll("[data-central-section]")) {
+    const isActive = button.dataset.centralSection === state.activeCentralSection;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
+  }
+
+  for (const view of elements.centralViews) {
+    const isActive = view.dataset.centralView === state.activeCentralSection;
+    view.classList.toggle("active", isActive);
+    view.hidden = !isActive;
+  }
+}
+
+async function runFlowAction(action) {
+  if (state.flowDemo.busy) {
+    return;
+  }
+
+  state.flowDemo.busy = true;
+  renderFlowDemo();
+  try {
+    await action();
+  } catch (error) {
+    state.flowDemo.message = error.message || "Document flow failed.";
+    state.flowDemo.walkthroughError = true;
+    showToast(state.flowDemo.message);
+  } finally {
+    state.flowDemo.busy = false;
+    renderFlowDemo();
+  }
+}
+
+async function runFlowWalkthrough() {
+  const demo = state.flowDemo;
+  demo.phase = 0;
+  demo.walkthroughError = false;
+  demo.stored = null;
+  demo.observed = null;
+  demo.message = "Preparing a draft document...";
+  renderFlowDemo();
+
+  await prepareFlowDemo();
+  demo.phase = 1;
+  demo.message = "The dashboard has prepared the edit on the Electron write path.";
+  renderFlowDemo();
+  await pauseFlow();
+
+  demo.phase = 2;
+  demo.request = `PUT /documents/${demo.document.id}`;
+  demo.message = "Sending the update through the shared document API.";
+  renderFlowDemo();
+  await pauseFlow();
+
+  await updateFlowDemo();
+  demo.phase = 3;
+  demo.message = `${state.runtimeName} accepted the document update.`;
+  renderFlowDemo();
+  await pauseFlow();
+
+  demo.stored = await flowReadApi.getDocument(demo.document.id);
+  if (demo.stored.title !== demo.document.title || demo.stored.status !== demo.document.status) {
+    throw new Error("The stored document does not match the update.");
+  }
+  demo.phase = 4;
+  demo.request = `GET /documents/${demo.document.id}`;
+  demo.message = "The updated document is available by its shared resource ID.";
+  renderFlowDemo();
+  await pauseFlow();
+
+  await readFlowDemo();
+  demo.phase = 5;
+  demo.message = "Verified: a second API client reads the updated title and status. Launch MAUI to view its live list.";
+  renderFlowDemo();
+}
+
+function pauseFlow() {
+  return new Promise((resolve) => window.setTimeout(resolve, 850));
+}
+
+async function prepareFlowDemo() {
+  const demo = state.flowDemo;
+  const workspaces = await platformApi.listWorkspaces();
+  let workspace = workspaces.find((item) => item.name === "Cross-Host Demo");
+  if (!workspace) {
+    workspace = await platformApi.createWorkspace({ name: "Cross-Host Demo" });
+  }
+
+  const documents = await platformApi.listDocuments(workspace.id);
+  let documentItem = documents.find((item) => item.tags?.includes("cross-host-demo"));
+  const reusedDocument = Boolean(documentItem);
+  if (documentItem) {
+    documentItem = await platformApi.updateDocument(documentItem.id, {
+      title: "Project Plan",
+      status: "draft",
+      tags: ["cross-host-demo"]
+    });
+  } else {
+    documentItem = await platformApi.createDocument({
+      workspaceId: workspace.id,
+      title: "Project Plan",
+      status: "draft",
+      tags: ["cross-host-demo"]
+    });
+  }
+
+  demo.workspace = workspace;
+  demo.document = documentItem;
+  demo.observed = null;
+  demo.stage = 1;
+  demo.request = reusedDocument ? "PUT /documents/{id}" : "POST /documents";
+  demo.message = "Draft document prepared in the shared backend.";
+  renderFlowDemo();
+}
+
+async function updateFlowDemo() {
+  const demo = state.flowDemo;
+  if (!demo.document) {
+    throw new Error("Prepare the document first.");
+  }
+
+  demo.document = await platformApi.updateDocument(demo.document.id, {
+    title: "Project Plan - Updated",
+    status: "review",
+    tags: ["cross-host-demo", "electron"]
+  });
+  demo.stage = 2;
+  demo.request = "PUT /documents/{id}";
+  demo.message = "Update stored. The read step checks what another client sees.";
+  renderFlowDemo();
+}
+
+async function readFlowDemo() {
+  const demo = state.flowDemo;
+  if (!demo.workspace || demo.stage < 2) {
+    throw new Error("Send the update first.");
+  }
+
+  const documents = await flowReadApi.listDocuments(demo.workspace.id);
+  const observed = documents.find((item) => item.id === demo.document.id);
+  if (!observed || observed.title !== demo.document.title || observed.status !== demo.document.status) {
+    throw new Error("The second client did not read the updated document.");
+  }
+
+  demo.observed = observed;
+  demo.stage = 3;
+  demo.request = "GET /documents?workspaceId=...";
+  demo.message = "Verified through a second API client. Launch MAUI to see its live document list.";
+  renderFlowDemo();
+}
+
+function renderFlowDemo() {
+  const demo = state.flowDemo;
+  elements.flowBackendUrl.textContent = `Backend: ${window.location.origin}`;
+  elements.flowRuntime.textContent = state.runtimeName;
+  elements.flowWorkspace.textContent = demo.workspace?.name ?? "-";
+  elements.flowElectronTitle.textContent = demo.document?.title ?? "-";
+  elements.flowElectronStatus.textContent = demo.document?.status ?? "-";
+  elements.flowRequest.textContent = demo.request;
+  elements.flowDocumentId.textContent = demo.document?.id ?? "-";
+  elements.flowMauiTitle.textContent = demo.observed?.title ?? "-";
+  elements.flowMauiStatus.textContent = demo.observed?.status ?? "-";
+  elements.flowMauiUpdated.textContent = demo.observed ? formatDate(demo.observed.updatedAt) : "-";
+  elements.flowMessage.textContent = demo.message;
+  elements.prepareFlowStatus.textContent = demo.stage >= 1 ? "Prepared" : "Ready";
+  elements.updateFlowStatus.textContent = demo.stage >= 2 ? "Updated" : "Waiting";
+  elements.readFlowStatus.textContent = demo.stage >= 3 ? "Verified" : "Waiting";
+  elements.prepareFlowDemo.classList.toggle("active", demo.stage >= 1);
+  elements.updateFlowDemo.classList.toggle("active", demo.stage >= 2);
+  elements.readFlowDemo.classList.toggle("active", demo.stage >= 3);
+  elements.runFlowDemo.disabled = demo.busy;
+  elements.prepareFlowDemo.disabled = demo.busy;
+  elements.updateFlowDemo.disabled = demo.busy || demo.stage < 1;
+  elements.readFlowDemo.disabled = demo.busy || demo.stage < 2;
+  elements.viewFlowWorkspace.disabled = demo.busy || !demo.workspace;
+  renderFlowWalkthrough();
+}
+
+function renderFlowWalkthrough() {
+  const demo = state.flowDemo;
+  elements.flowWalkthroughBackend.textContent = `${state.runtimeName} backend at ${window.location.origin}`;
+  elements.flowTrack.style.setProperty("--flow-progress", `${Math.max(0, demo.phase - 1) * 25}%`);
+  [...elements.flowTrack.children].forEach((step, index) => {
+    step.classList.toggle("active", index + 1 === demo.phase);
+    step.classList.toggle("complete", index + 1 < demo.phase);
+  });
+  elements.flowWalkthroughTitleValue.textContent = "Project Plan - Updated";
+  elements.flowWalkthroughStatusValue.textContent = "review";
+  elements.flowWalkthroughRequest.textContent = demo.phase === 0 ? "Preparing document..." : demo.request;
+  elements.flowWalkthroughResource.textContent = `Resource ID: ${demo.document?.id ?? "-"}`;
+  elements.flowWalkthroughReadTitle.textContent = demo.observed?.title ?? "Waiting for read...";
+  elements.flowWalkthroughReadStatus.textContent = demo.observed?.status ?? "-";
+  elements.flowWalkthroughMessage.textContent = demo.message;
+  elements.flowWalkthroughMessage.classList.toggle("error", demo.walkthroughError);
+  elements.replayFlowWalkthrough.disabled = demo.busy;
 }
 
 function renderWorkspaces() {
@@ -359,6 +685,149 @@ function renderImplementations() {
   );
 }
 
+function renderLocalSetup() {
+  if (!elements.localSetupDetail) {
+    return;
+  }
+
+  elements.localSetupDetail.replaceChildren(
+    ...localSetupSections().map((setup) => localSetupCard(setup))
+  );
+}
+
+function localSetupSections() {
+  return [
+    {
+      key: "node",
+      name: "Node.js",
+      status: nodeBackendStatus() === "Running" ? "Running" : "Manual",
+      summary: "Node starts the central dashboard, so a fresh user installs Node before opening this UI.",
+      commandText: "Install Node.js LTS, then run npm install and npm run dev",
+      facts: ["Required before this UI can run", `Runtime: ${state.runtimeName}`, "Manual first step"]
+    },
+    {
+      key: "python",
+      name: "Python Tooling",
+      status: setupCardStatus(localSetupState("python"), "python"),
+      summary: "Installs Python 3.11 for the Python backend and Python workers.",
+      setupCommand: "setupPythonTooling",
+      statusCommand: "getPythonToolingStatus",
+      setupAction: "Install / Repair Python",
+      commandText: "winget install Python.Python.3.11",
+      facts: [
+        `Python: ${localSetupState("python")?.python ?? "unknown"}`,
+        "Python backend",
+        "Python workers"
+      ]
+    },
+    {
+      key: "dotnet",
+      name: ".NET SDK",
+      status: setupCardStatus(localSetupState("dotnet"), "dotnet"),
+      summary: "Installs the .NET SDK used by ASP.NET Core, .NET Desktop, and MAUI.",
+      setupCommand: "setupDotnetTooling",
+      statusCommand: "getDotnetToolingStatus",
+      setupAction: "Install / Repair .NET SDK",
+      commandText: "winget install Microsoft.DotNet.SDK.10",
+      facts: [
+        `.NET: ${localSetupState("dotnet")?.dotnet ?? "unknown"}`,
+        "ASP.NET Core",
+        ".NET Desktop"
+      ]
+    },
+    {
+      key: "electronDependencies",
+      name: "Electron Dependencies",
+      status: setupCardStatus(localSetupState("electronDependencies"), "electronDependencies"),
+      summary: "Installs the desktop host dependencies after Node packages are restored.",
+      setupCommand: "setupElectronDependencies",
+      statusCommand: "getElectronDependenciesStatus",
+      setupAction: "Install Electron Dependencies",
+      commandText: "npm --prefix apps/hosts/electron install",
+      facts: [
+        `Electron: ${localSetupState("electronDependencies")?.electronDependencies ?? "unknown"}`,
+        "Desktop shell",
+        "Local files"
+      ]
+    },
+    {
+      key: "spring",
+      name: "Spring Boot Tooling",
+      status: setupCardStatus(state.springSetup, "spring"),
+      summary: "Installs Java 17 and Maven for the Spring Boot backend/admin.",
+      setupCommand: "setupSpringBackend",
+      statusCommand: "getSpringSetupStatus",
+      setupAction: "Install Java / Maven",
+      commandText: "winget install Microsoft.OpenJDK.17 and Apache.Maven",
+      facts: springBackendFacts()
+    },
+    {
+      key: "maui",
+      name: ".NET MAUI Workload",
+      status: setupCardStatus(state.mauiSetup, "maui"),
+      summary: "Installs the optional MAUI workload for the MAUI desktop host.",
+      setupCommand: "setupMauiHost",
+      statusCommand: "getMauiSetupStatus",
+      setupAction: "Install / Repair MAUI",
+      commandText: "dotnet workload install maui",
+      facts: [
+        `MAUI: ${state.mauiSetup?.mauiWorkload ?? state.mauiSetup?.status ?? "unknown"}`,
+        "Optional host",
+        "Shared API"
+      ]
+    }
+  ];
+}
+
+function localSetupCard(setup) {
+  const article = document.createElement("article");
+  article.className = "implementation-card";
+
+  const header = document.createElement("div");
+  header.className = "implementation-card-header";
+  const title = document.createElement("h4");
+  title.textContent = setup.name;
+  const status = document.createElement("span");
+  status.className = `runtime-badge ${setup.status.toLowerCase()}`;
+  status.textContent = setup.status;
+  header.append(title, status);
+
+  const summary = document.createElement("p");
+  summary.textContent = setup.summary;
+  article.append(header, summary);
+
+  if (setup.setupCommand) {
+    const button = document.createElement("button");
+    button.className = "implementation-link";
+    button.type = "button";
+    button.textContent = setup.setupAction;
+    button.addEventListener("click", () => setupLocalTool(setup));
+    article.append(button);
+  }
+
+  if (setup.statusCommand) {
+    const button = document.createElement("button");
+    button.className = "implementation-link";
+    button.type = "button";
+    button.textContent = "Check Status";
+    button.addEventListener("click", () => refreshLocalSetupStatus(setup));
+    article.append(button);
+  }
+
+  article.append(localSetupStatusPanel(setup));
+
+  const facts = document.createElement("div");
+  facts.className = "implementation-facts";
+  for (const fact of setup.facts) {
+    const item = document.createElement("span");
+    item.textContent = fact;
+    facts.append(item);
+  }
+  article.append(facts);
+
+  return article;
+}
+
 function implementationSections(metrics) {
   return {
     hosts: [
@@ -410,8 +879,10 @@ function implementationSections(metrics) {
     backends: [
       {
         name: "Node Backend",
-        status: state.runtimeName === "node" ? "Running" : "Available",
+        status: nodeBackendStatus(),
         summary: "Default local backend for the dashboard, SQLite metadata, local file storage, worker startup, and desktop launcher control.",
+        href: "/node-admin/",
+        hrefAction: "Open Node Admin",
         facts: [
           `${metrics.uploadedFiles} files ingested`,
           `${metrics.completedJobs} completed jobs`,
@@ -436,15 +907,33 @@ function implementationSections(metrics) {
         facts: springBackendFacts()
       },
       {
+        name: "ASP.NET Core Backend",
+        status: aspNetCoreBackendStatus(),
+        summary: "Microsoft server backend option that implements the same OpenAPI routes and can serve the shared admin/web hosts.",
+        href: aspNetCoreAdminHref(),
+        command: "launchAspNetCoreBackend",
+        stopCommand: "closeAspNetCoreBackend",
+        action: "Start ASP.NET Admin",
+        stopAction: "Stop ASP.NET Core",
+        hrefAction: "Open ASP.NET Admin",
+        facts: [
+          ".NET SDK runtime",
+          "Hosted worker",
+          `Runtime: ${state.aspNetCoreHealth?.runtime ?? "stopped"}`
+        ]
+      },
+      {
         name: "Python Backend",
-        status: state.runtimeName === "python" ? "Running" : "Available",
+        status: pythonBackendStatus(),
         summary: "Interchangeable backend using the same contract with in-memory metadata and local file bytes.",
-        facts: ["Implements workspaces", "Implements documents and uploads", "Implements jobs"]
+        href: "/python-admin/",
+        hrefAction: "Open Python Admin",
+        facts: ["Implements workspaces", "Implements documents and uploads", `Runtime: ${state.pythonHealth?.runtime ?? "stopped"}`]
       },
       {
         name: "Future Backends",
         status: "Planned",
-        summary: "ASP.NET Core, FastAPI, and Go can implement the same OpenAPI surface without host rewrites.",
+        summary: "FastAPI and Go can implement the same OpenAPI surface without host rewrites.",
         facts: ["Same contracts", "Own persistence choices", "No host rewrite required"]
       }
     ],
@@ -452,7 +941,9 @@ function implementationSections(metrics) {
       {
         name: "Document Worker",
         status: "Running",
-        summary: "Processes queued document jobs through the shared worker lifecycle.",
+        summary: "Processes queued document jobs through the shared worker lifecycle across the active backend.",
+        href: "/document-worker-admin/",
+        hrefAction: "Open Worker Admin",
         facts: [
           `${metrics.queuedJobs} queued`,
           `${metrics.runningJobs} running`,
@@ -461,15 +952,19 @@ function implementationSections(metrics) {
       },
       {
         name: "Python Worker",
-        status: "Planned",
-        summary: "Specialized worker for text extraction, OCR, summaries, embeddings, and semantic search.",
-        facts: ["Can consume same job protocol", "Good fit for AI/OCR libraries", "Can run out of process"]
+        status: pythonBackendStatus() === "Running" ? "Running" : "Available",
+        summary: "Python backend now runs a background worker for extract-text, thumbnail, summarize, and index-search jobs.",
+        href: "/python-worker-admin/",
+        hrefAction: "Open Python Worker",
+        facts: ["Python-first for AI/OCR libraries", "Runs queued jobs", `Backend: ${pythonBackendStatus().toLowerCase()}`]
       },
       {
         name: "Search Worker",
-        status: "Planned",
-        summary: "Indexes extracted document content and metadata for cross-host search.",
-        facts: ["Indexes files", "Indexes tags", "Publishes job results"]
+        status: "Available",
+        summary: "Uses the shared index-search job type so search indexing stays portable across runtimes.",
+        href: "/search-worker-admin/",
+        hrefAction: "Open Search Worker",
+        facts: [`${metrics.searchJobs} search jobs`, "Indexes metadata", "Ready for vector/keyword backends"]
       }
     ]
   };
@@ -584,6 +1079,12 @@ function isSpringSetupActive() {
     state.springSetup?.spring === "starting";
 }
 
+function isLocalSetupActive() {
+  return Object.values(state.localSetup).some((setup) =>
+    setup?.status === "starting" || setup?.status === "running"
+  );
+}
+
 async function launchHost(command) {
   await runAction(async () => {
     const result = await platformApi[command]();
@@ -619,6 +1120,7 @@ async function setupHost(command) {
     const result = await platformApi[command]();
     setSetupState(result);
     renderImplementations();
+    renderLocalSetup();
     showToast(result.status === "running" ? `${hostLabel(result.host)} is already running.` : `${hostLabel(result.host)} installer started.`);
   });
 }
@@ -627,8 +1129,29 @@ async function refreshSetupStatus(command) {
   await runAction(async () => {
     setSetupState(await platformApi[command]());
     renderImplementations();
+    renderLocalSetup();
     const setup = setupStateForHost(command.includes("Spring") ? "spring" : "maui");
     showToast(`${hostLabel(setup.host)} setup is ${setup.status}.`);
+  });
+}
+
+async function setupLocalTool(setup) {
+  await runAction(async () => {
+    const result = await platformApi[setup.setupCommand]();
+    setSetupState(result);
+    renderLocalSetup();
+    renderImplementations();
+    showToast(result.status === "running" ? `${hostLabel(result.host)} installer is already running.` : `${hostLabel(result.host)} installer started.`);
+  });
+}
+
+async function refreshLocalSetupStatus(setup) {
+  await runAction(async () => {
+    const result = await platformApi[setup.statusCommand]();
+    setSetupState(result);
+    renderLocalSetup();
+    renderImplementations();
+    showToast(`${hostLabel(result.host)} setup is ${result.status}.`);
   });
 }
 
@@ -637,10 +1160,31 @@ function setSetupState(result) {
     state.springSetup = result;
     return;
   }
+  if (result.host === "python") {
+    state.localSetup.python = result;
+    return;
+  }
+  if (result.host === "dotnet") {
+    state.localSetup.dotnet = result;
+    return;
+  }
+  if (result.host === "electron-deps") {
+    state.localSetup.electronDependencies = result;
+    return;
+  }
   state.mauiSetup = result;
 }
 
 function hostLabel(host) {
+  if (host === "python") {
+    return "Python";
+  }
+  if (host === "dotnet") {
+    return ".NET SDK";
+  }
+  if (host === "electron-deps") {
+    return "Electron dependencies";
+  }
   if (host === "dotnet-desktop") {
     return ".NET desktop";
   }
@@ -655,6 +1199,9 @@ function hostLabel(host) {
   }
   if (host === "spring-backend") {
     return "Spring Boot";
+  }
+  if (host === "aspnet-core-backend") {
+    return "ASP.NET Core";
   }
   return "Desktop";
 }
@@ -735,15 +1282,56 @@ function setupStatusPanel(statusView) {
   return panel;
 }
 
+function localSetupStatusPanel(setupDefinition) {
+  const setup = localSetupState(setupDefinition.key);
+  const panel = document.createElement("div");
+  panel.className = "setup-status";
+
+  const status = document.createElement("span");
+  status.className = "setup-status-label";
+  status.textContent = `Setup: ${setup?.status ?? setupDefinition.status.toLowerCase()}`;
+
+  const command = document.createElement("span");
+  command.textContent = `Command: ${setup?.command ?? setupDefinition.commandText}`;
+
+  panel.append(status, command, ...setupDetails(setup));
+
+  if (setup?.logPath || setup?.lastOutput) {
+    const details = document.createElement("details");
+    details.className = "setup-log";
+    const summary = document.createElement("summary");
+    summary.textContent = "Show installer log";
+    details.append(summary);
+    if (setup.logPath) {
+      const logPath = document.createElement("span");
+      logPath.className = "setup-log-path";
+      logPath.textContent = `Path: ${setup.logPath}`;
+      details.append(logPath);
+    }
+    if (setup.lastOutput) {
+      const output = document.createElement("pre");
+      output.textContent = setup.lastOutput;
+      details.append(output);
+    }
+    panel.append(details);
+  }
+
+  return panel;
+}
+
 function setupDetails(setup) {
   if (!setup) {
     return [];
   }
 
   const details = [
+    ["Python", setup.python],
+    [".NET", setup.dotnet],
+    ["Electron", setup.electronDependencies],
     ["Java", setup.java],
     ["Maven", setup.maven],
     ["Spring", setup.spring],
+    ["MAUI", setup.mauiWorkload],
     ["Started", setup.startedAt],
     ["Finished", setup.finishedAt],
     ["Exit", setup.exitCode === null || setup.exitCode === undefined ? null : String(setup.exitCode)]
@@ -764,6 +1352,45 @@ function setupStateForView(statusView) {
 
 function setupStateForHost(host) {
   return host === "spring" ? state.springSetup : state.mauiSetup;
+}
+
+function localSetupState(key) {
+  if (key === "spring") {
+    return state.springSetup;
+  }
+  if (key === "maui") {
+    return state.mauiSetup;
+  }
+  if (key === "electronDependencies") {
+    return state.localSetup.electronDependencies;
+  }
+  return state.localSetup[key];
+}
+
+function setupCardStatus(setup, key) {
+  if (!setup) {
+    return "Unknown";
+  }
+  if (setup.status === "starting" || setup.status === "running") {
+    return "Installing";
+  }
+  if (setup.status === "failed") {
+    return "Failed";
+  }
+  if (key === "spring") {
+    return setup.java === "installed" && setup.maven === "installed" ? "Available" : "Missing";
+  }
+  if (key === "maui") {
+    return setup.status === "completed" ? "Available" : "Available";
+  }
+  const value = setup[key];
+  if (value === "installed") {
+    return "Available";
+  }
+  if (value === "missing") {
+    return "Missing";
+  }
+  return setup.status === "completed" ? "Available" : "Unknown";
 }
 
 function defaultSetupCommand(statusView) {
@@ -794,7 +1421,7 @@ function springPrerequisitesInstalled() {
 
 function springAdminHref() {
   return state.springSetup?.spring === "running" || state.runtimeName === "spring-boot"
-    ? "http://localhost:3200/"
+    ? "http://localhost:3200/spring-admin/"
     : null;
 }
 
@@ -810,6 +1437,30 @@ function springBackendFacts() {
   ];
 }
 
+function nodeBackendStatus() {
+  return state.nodeHealth?.runtime === "node" || state.runtimeName === "node"
+    ? "Running"
+    : "Stopped";
+}
+
+function aspNetCoreBackendStatus() {
+  return state.aspNetCoreHealth?.runtime === "aspnet-core" || state.runtimeName === "aspnet-core"
+    ? "Running"
+    : "Stopped";
+}
+
+function aspNetCoreAdminHref() {
+  return aspNetCoreBackendStatus() === "Running"
+    ? "http://localhost:3300/aspnet-admin/"
+    : null;
+}
+
+function pythonBackendStatus() {
+  return state.pythonHealth?.runtime === "python" || state.runtimeName === "python"
+    ? "Running"
+    : "Stopped";
+}
+
 function adminMetrics() {
   return {
     workspaces: state.workspaces.length,
@@ -819,7 +1470,8 @@ function adminMetrics() {
     queuedJobs: countJobsByStatus("queued"),
     runningJobs: countJobsByStatus("running"),
     completedJobs: countJobsByStatus("completed"),
-    failedJobs: countJobsByStatus("failed")
+    failedJobs: countJobsByStatus("failed"),
+    searchJobs: state.jobs.filter((job) => job.type === "index-search").length
   };
 }
 
