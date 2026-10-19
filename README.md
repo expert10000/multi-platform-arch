@@ -172,11 +172,22 @@ different backend URLs does not synchronize their documents. Node persists
 locally in SQLite; Spring Boot and ASP.NET Core currently keep metadata in
 memory.
 
-The Central Admin **Document Flow** tab runs a sample create, update, and
-second-client read against the backend serving the dashboard. The individual
-step buttons expose each request, and the launch buttons open Electron and
-MAUI on that same backend when their local tooling is installed. Re-running
-the demo reuses its `Cross-Host Demo` workspace and tagged sample document.
+The Central Admin **Document Flow** tab runs a sample create, update, stored
+resource check, and second-client read against the backend serving the dashboard.
+**Run Demo** opens a five-stage walkthrough; **Run Again** replays it. The
+individual step buttons expose each request, and the launch buttons open
+Electron and MAUI on that same backend when their local tooling is installed.
+The walkthrough uses dashboard API clients, not automated clicks inside the
+desktop apps. Re-running it reuses the `Cross-Host Demo` workspace and tagged
+sample document.
+
+![Central Admin document flow walkthrough](docs/images/document-flow-walkthrough.png)
+
+The diagram below shows the intended Electron-to-MAUI flow through the shared
+contract. Today, both hosts must point at the **same backend URL** to see the
+same document; the different backend implementations do not share a database.
+
+![Cross-host document synchronization diagram](docs/images/cross-host-document-synchronization.png)
 
 ## Hosts
 

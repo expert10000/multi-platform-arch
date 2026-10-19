@@ -229,6 +229,48 @@
       </section>
     </main>
 
+    <dialog class="flow-walkthrough" id="flowWalkthrough" aria-labelledby="flowWalkthroughTitle">
+      <div class="flow-walkthrough-header">
+        <div>
+          <p class="eyebrow">Live API walkthrough</p>
+          <h2 id="flowWalkthroughTitle">Electron to .NET MAUI</h2>
+          <p id="flowWalkthroughBackend" class="flow-backend"></p>
+        </div>
+        <button class="ghost" id="closeFlowWalkthrough" type="button" aria-label="Close walkthrough">Close</button>
+      </div>
+      <div class="flow-walkthrough-body">
+        <ol class="flow-track" id="flowTrack" aria-label="Document flow progress">
+          <li><span>1</span><strong>Prepare edit</strong><small>Electron path</small></li>
+          <li><span>2</span><strong>Send request</strong><small>Shared contract</small></li>
+          <li><span>3</span><strong>Process</strong><small>Backend</small></li>
+          <li><span>4</span><strong>Store</strong><small>Shared data</small></li>
+          <li><span>5</span><strong>Read result</strong><small>MAUI path</small></li>
+        </ol>
+        <div class="flow-walkthrough-detail">
+          <div class="flow-walkthrough-document">
+            <small>Document update</small>
+            <strong id="flowWalkthroughTitleValue">Project Plan - Updated</strong>
+            <span id="flowWalkthroughStatusValue">review</span>
+          </div>
+          <div class="flow-walkthrough-request">
+            <small>Current API operation</small>
+            <code id="flowWalkthroughRequest">Preparing document...</code>
+            <small id="flowWalkthroughResource">Resource ID: -</small>
+          </div>
+          <div class="flow-walkthrough-document result">
+            <small>Second client readback</small>
+            <strong id="flowWalkthroughReadTitle">Waiting for read...</strong>
+            <span id="flowWalkthroughReadStatus">-</span>
+          </div>
+        </div>
+        <p class="flow-walkthrough-message" id="flowWalkthroughMessage" role="status" aria-live="polite">Starting demo...</p>
+        <p class="flow-walkthrough-note">This walkthrough uses the shared API from the dashboard. Launch Electron or MAUI separately to inspect the same document in those apps.</p>
+      </div>
+      <div class="flow-walkthrough-footer">
+        <button class="primary" id="replayFlowWalkthrough" type="button">Run Again</button>
+      </div>
+    </dialog>
+
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script type="module" src="/admin/app.js"></script>
   </body>

@@ -19,7 +19,10 @@ const state = {
     workspace: null,
     document: null,
     observed: null,
+    stored: null,
     stage: 0,
+    phase: 0,
+    walkthroughError: false,
     busy: false,
     request: "-",
     message: "Ready to prepare a document."
@@ -93,6 +96,18 @@ const elements = {
   implementationDetail: document.querySelector("#implementationDetail"),
   localSetupDetail: document.querySelector("#localSetupDetail"),
   flowBackendUrl: document.querySelector("#flowBackendUrl"),
+  flowWalkthrough: document.querySelector("#flowWalkthrough"),
+  flowTrack: document.querySelector("#flowTrack"),
+  flowWalkthroughBackend: document.querySelector("#flowWalkthroughBackend"),
+  flowWalkthroughTitleValue: document.querySelector("#flowWalkthroughTitleValue"),
+  flowWalkthroughStatusValue: document.querySelector("#flowWalkthroughStatusValue"),
+  flowWalkthroughRequest: document.querySelector("#flowWalkthroughRequest"),
+  flowWalkthroughResource: document.querySelector("#flowWalkthroughResource"),
+  flowWalkthroughReadTitle: document.querySelector("#flowWalkthroughReadTitle"),
+  flowWalkthroughReadStatus: document.querySelector("#flowWalkthroughReadStatus"),
+  flowWalkthroughMessage: document.querySelector("#flowWalkthroughMessage"),
+  replayFlowWalkthrough: document.querySelector("#replayFlowWalkthrough"),
+  closeFlowWalkthrough: document.querySelector("#closeFlowWalkthrough"),
   runFlowDemo: document.querySelector("#runFlowDemo"),
   prepareFlowDemo: document.querySelector("#prepareFlowDemo"),
   updateFlowDemo: document.querySelector("#updateFlowDemo"),
@@ -136,13 +151,12 @@ elements.refreshButton.addEventListener("click", async () => {
   });
 });
 
-elements.runFlowDemo.addEventListener("click", () => runFlowAction(async () => {
-  await prepareFlowDemo();
-  await new Promise((resolve) => window.setTimeout(resolve, 700));
-  await updateFlowDemo();
-  await new Promise((resolve) => window.setTimeout(resolve, 700));
-  await readFlowDemo();
-}));
+elements.runFlowDemo.addEventListener("click", () => {
+  elements.flowWalkthrough.showModal();
+  runFlowAction(runFlowWalkthrough);
+});
+elements.replayFlowWalkthrough.addEventListener("click", () => runFlowAction(runFlowWalkthrough));
+elements.closeFlowWalkthrough.addEventListener("click", () => elements.flowWalkthrough.close());
 
 elements.prepareFlowDemo.addEventListener("click", () => runFlowAction(prepareFlowDemo));
 elements.updateFlowDemo.addEventListener("click", () => runFlowAction(updateFlowDemo));
@@ -382,11 +396,59 @@ async function runFlowAction(action) {
     await action();
   } catch (error) {
     state.flowDemo.message = error.message || "Document flow failed.";
+    state.flowDemo.walkthroughError = true;
     showToast(state.flowDemo.message);
   } finally {
     state.flowDemo.busy = false;
     renderFlowDemo();
   }
+}
+
+async function runFlowWalkthrough() {
+  const demo = state.flowDemo;
+  demo.phase = 0;
+  demo.walkthroughError = false;
+  demo.stored = null;
+  demo.observed = null;
+  demo.message = "Preparing a draft document...";
+  renderFlowDemo();
+
+  await prepareFlowDemo();
+  demo.phase = 1;
+  demo.message = "The dashboard has prepared the edit on the Electron write path.";
+  renderFlowDemo();
+  await pauseFlow();
+
+  demo.phase = 2;
+  demo.request = `PUT /documents/${demo.document.id}`;
+  demo.message = "Sending the update through the shared document API.";
+  renderFlowDemo();
+  await pauseFlow();
+
+  await updateFlowDemo();
+  demo.phase = 3;
+  demo.message = `${state.runtimeName} accepted the document update.`;
+  renderFlowDemo();
+  await pauseFlow();
+
+  demo.stored = await flowReadApi.getDocument(demo.document.id);
+  if (demo.stored.title !== demo.document.title || demo.stored.status !== demo.document.status) {
+    throw new Error("The stored document does not match the update.");
+  }
+  demo.phase = 4;
+  demo.request = `GET /documents/${demo.document.id}`;
+  demo.message = "The updated document is available by its shared resource ID.";
+  renderFlowDemo();
+  await pauseFlow();
+
+  await readFlowDemo();
+  demo.phase = 5;
+  demo.message = "Verified: a second API client reads the updated title and status. Launch MAUI to view its live list.";
+  renderFlowDemo();
+}
+
+function pauseFlow() {
+  return new Promise((resolve) => window.setTimeout(resolve, 850));
 }
 
 async function prepareFlowDemo() {
@@ -484,6 +546,26 @@ function renderFlowDemo() {
   elements.updateFlowDemo.disabled = demo.busy || demo.stage < 1;
   elements.readFlowDemo.disabled = demo.busy || demo.stage < 2;
   elements.viewFlowWorkspace.disabled = demo.busy || !demo.workspace;
+  renderFlowWalkthrough();
+}
+
+function renderFlowWalkthrough() {
+  const demo = state.flowDemo;
+  elements.flowWalkthroughBackend.textContent = `${state.runtimeName} backend at ${window.location.origin}`;
+  elements.flowTrack.style.setProperty("--flow-progress", `${Math.max(0, demo.phase - 1) * 25}%`);
+  [...elements.flowTrack.children].forEach((step, index) => {
+    step.classList.toggle("active", index + 1 === demo.phase);
+    step.classList.toggle("complete", index + 1 < demo.phase);
+  });
+  elements.flowWalkthroughTitleValue.textContent = "Project Plan - Updated";
+  elements.flowWalkthroughStatusValue.textContent = "review";
+  elements.flowWalkthroughRequest.textContent = demo.phase === 0 ? "Preparing document..." : demo.request;
+  elements.flowWalkthroughResource.textContent = `Resource ID: ${demo.document?.id ?? "-"}`;
+  elements.flowWalkthroughReadTitle.textContent = demo.observed?.title ?? "Waiting for read...";
+  elements.flowWalkthroughReadStatus.textContent = demo.observed?.status ?? "-";
+  elements.flowWalkthroughMessage.textContent = demo.message;
+  elements.flowWalkthroughMessage.classList.toggle("error", demo.walkthroughError);
+  elements.replayFlowWalkthrough.disabled = demo.busy;
 }
 
 function renderWorkspaces() {
